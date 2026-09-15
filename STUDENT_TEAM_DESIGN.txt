@@ -1,0 +1,377 @@
+================================================================================
+          APPFORGE — DETAILED DESIGN SPECIFICATION: STUDENT TEAM SECTION
+================================================================================
+Document: Technical & Visual Design Analysis of the Student Team Section
+File Created For: Project Documentation
+Date: 2026-09-15
+Target Directory: c:\Users\Kiran\OneDrive\Desktop\SJB
+Key Files Involved:
+  - components/People.tsx (Parent Section Container & Data Orchestrator)
+  - components/StudentTeamReel.tsx (Kinetic Flow Engine & Focus Tracker)
+  - components/StudentProfileCard.tsx (Glassmorphic Rack-Focus Profile Cards)
+  - components/ConstellationBackground.tsx (HTML5 Particle & Spark Canvas Simulation)
+  - components/PersonCard.tsx (Reference: Faculty / Institutional Counterpart)
+  - app/globals.css (Design Tokens, Glassmorphism, Utilities)
+  - tailwind.config.ts (Theme Tokens, Fonts & Color Palette)
+================================================================================
+
+
+1. EXECUTIVE OVERVIEW & CONCEPTUAL PURPOSE
+--------------------------------------------------------------------------------
+The "Student Team" section in AppForge (SJBIT CSE Hackathon) fulfills an essential
+dual role: humanizing the competition and giving participants direct, accessible
+points of contact for real-time support across key operational domains (technical
+platform, hospitality, event logistics, and media/documentation).
+
+From a user experience (UX) and brand identity perspective, the section departs
+from the traditional, static grid format typical of institutional websites.
+Instead, it implements an immersive, interactive, tactile "kinetic reel" with
+optical depth-of-field simulation.
+
+Key Design Goals:
+  1. Highlight Student Leadership: Give equal prominence to the student core leads
+     who drive the day-to-day operations of the 24-hour hackathon.
+  2. Frictionless Contact Access: Provide immediate, single-tap communication
+     channels (direct telephonic dialing via `tel:+91...` and LinkedIn networking).
+  3. Cinematic Depth-of-Field: Mimic a camera lens racking focus as cards drift
+     across the center of the viewport, drawing visitor attention naturally to one
+     individual at a time without feeling restrictive.
+  4. Autonomous Yet Respectful Motion: Continuous ambient drift that automatically
+     pauses upon user engagement (hover, click, keyboard interaction, or touch drag)
+     and gracefully resumes after a calm idle window (5.5 seconds).
+  5. Atmospheric Cohesion: Sits upon an ambient constellation network canvas
+     featuring subtle drifting nodes, dynamic proximity links, and amber electrical
+     sparks that harmonize with AppForge's gold/ink brand palette.
+
+
+2. ARCHITECTURAL HIERARCHY & COMPONENT COMPOSITION
+--------------------------------------------------------------------------------
+The section is organized in a modular, hierarchical tree within the primary
+landing page layout:
+
+[ Page.tsx ]
+    └── <People /> (id="people")
+         ├── [ Background Layer ]
+         │    └── <ConstellationBackground />
+         │         └── HTML5 Canvas 2D ambient particle physics simulation.
+         │
+         ├── [ Content Layer 1: Header & Institutional Leadership ]
+         │    ├── Section Kicker ("People") + Headline ("Behind AppForge")
+         │    └── Leadership Tiers (Patron, Presides, Coordinators)
+         │         └── Rendered via static <PersonCard /> glass grid.
+         │
+         └── [ Content Layer 2: Student Team Showcase ]
+              ├── Sub-heading ("Student Team") in uppercase gold tracking
+              └── <StudentTeamReel students={STUDENT_TEAM} />
+                   ├── Kinetic Scroll Track (CSS scroll-snap + rAF loop)
+                   ├── Dynamic Spacer Columns (calc(50% - 140px))
+                   ├── <StudentProfileCard /> (Repeated for each student lead)
+                   │    ├── Concentric Avatar Frame with Gold Pulsing Glow
+                   │    ├── Lead Name & Gold Role Badge
+                   │    ├── Direct Call Action Button (+91 Phone link)
+                   │    └── Direct LinkedIn Icon Link
+                   └── Dot Indicator Navigation Bar (Active pill expansion)
+
+
+3. DATA MODEL & STUDENT ROSTER
+--------------------------------------------------------------------------------
+The student data is declared in `components/People.tsx` as a typed array of
+`Person` objects:
+
+  type Person = {
+    name: string;
+    role?: string;
+    tel?: string;
+    tierOverride?: string;
+    linkedin?: string;
+  };
+
+Current Student Core Roster:
+  1. Akshay K
+     - Role: "Main Student Co-ordinator"
+     - Phone: +91 9740685444
+     - LinkedIn: https://www.linkedin.com/in/akshayk44776/
+     - Function: General hackathon governance, overall schedule management.
+
+  2. Eshan H
+     - Role: "Main Student Co-ordinator"
+     - Phone: +91 9380070210
+     - LinkedIn: https://www.linkedin.com/in/eshan-h/
+     - Function: External outreach, participant operations, administrative sync.
+
+  3. Divya D
+     - Role: "Lead — Tech & Platform"
+     - Phone: +91 6360364399
+     - LinkedIn: https://www.linkedin.com/in/divyad03/
+     - Function: Hackathon software stack, evaluation portals, submission infra.
+
+  4. Abhilasha B Chakrasali
+     - Role: "Lead — Hospitality"
+     - Phone: +91 9449476813
+     - LinkedIn: https://www.linkedin.com/in/abhilasha-chakrasali-16a7442b6/
+     - Function: Participant accommodation, refreshments, venue comfort.
+
+  5. Laxmi Hooli
+     - Role: "Lead — Media & Documentation"
+     - Phone: +91 7483397882
+     - LinkedIn: https://www.linkedin.com/in/laxmi-hooli/
+     - Function: Photography, videography, live event press, social coverage.
+
+
+4. VISUAL DESIGN SYSTEM & COLOR TOKENS
+--------------------------------------------------------------------------------
+The student team section adheres strictly to the AppForge design tokens defined
+in `app/globals.css` and `tailwind.config.ts`:
+
+  - Deep Ink Canvas (--ink: #07090d):
+    Provides an ultra-dark, noise-free backdrop, maximizing the contrast of the
+    frosted glass cards and golden interactive accents.
+
+  - Frosted Glassmorphic Surface (.glass-card):
+    * Background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))
+    * Backdrop Filter: blur(16px) saturate(140%)
+    * Border: 1px solid rgba(255, 255, 255, 0.08)
+    * Top Highlight: 1px gradient line (via white/20 to transparent)
+    * Corner Radius: 18px (modern, rounded silhouette)
+    * Elevation Box Shadow: 0 12px 40px rgba(0, 0, 0, 0.55)
+
+  - Gold Brand Accents (--gold: #d9a94a, --gold-bright: #f4c862):
+    * Used for the section kicker, student role badge pill, active avatar halo,
+      focused card borders, indicator dots, and amber canvas spark bursts.
+    * Role pill background: rgba(217, 169, 74, 0.12) with crisp #d9a94a text.
+
+  - Periwinkle Utility Accent (--periwinkle: #7C9CF0):
+    * Used for contact iconography, telephone links, and LinkedIn hover states.
+    * Creates visual variety and functional separation between "role status"
+      (gold) and "interactive contact channels" (periwinkle).
+
+  - Typography Hierarchy:
+    * Headings & Kickers: Space Grotesk (`font-display`).
+    * Body, Names & Roles: Inter (`--font-inter`, clean sans-serif legibility).
+    * Phone Numbers: Tabular numerals (`tabular-nums`) to prevent jitter during
+      transitions.
+
+
+5. KINETIC REEL ENGINE (StudentTeamReel.tsx)
+--------------------------------------------------------------------------------
+The reel mechanism combines native browser scrolling, CSS Scroll Snap, and a
+high-performance `requestAnimationFrame` (rAF) physics loop.
+
+A. Continuous Ambient Drift ("Flow" Mode):
+   - Parameters:
+     * `FLOW_SPEED = 0.5px` per frame.
+     * `RESUME_DELAY = 5500ms` (5.5s pause before auto-resuming drift).
+   - Behavior:
+     * When the user is not actively interacting, the track gently shifts
+       horizontally.
+     * Boundary detection automatically flips `flowDirectionRef` (1 to -1) when
+       `scrollLeft >= maxScroll - 1` or `scrollLeft <= 1`, creating a perpetual
+       pendulum-like drift across the cards.
+
+B. Interactive Takeover & Frictionless Centering:
+   - Hover / Click Detection:
+     * Triggering `onClick` or `onMouseEnter` on any card immediately executes
+       `stopFlow()`, cancelling the animation frame.
+     * Computes the exact delta required to center the selected card:
+       `scrollDelta = (cardRect.left - trackRect.left + cardRect.width/2) - (trackRect.width/2)`
+     * Dispatches `track.scrollBy({ left: scrollDelta, behavior: "smooth" })`.
+     * Starts an inactivity timer (`resumeTimerRef`). If no further input occurs
+       within 5500ms, flow smoothly resumes.
+
+C. Layout Math & Centering Spacers:
+   - Fixed Card Width: Exactly 280px (`min-w-[280px]`).
+   - Dynamic Spacers:
+     * Both the leading and trailing edges of the scroll track contain empty
+       spacer blocks styled with `width: calc(50% - 140px)`.
+     * Since 140px is exactly half of a 280px card, this mathematical offset
+       guarantees that the very first card (Akshay K) and the very last card
+       (Laxmi Hooli) can sit dead-center in the viewport with equal margins on
+       any screen width (mobile, tablet, or ultrawide desktop).
+   - CSS Snapping:
+     * `scrollSnapType: "x mandatory"`
+     * Each card container has `scrollSnapAlign: "center"`.
+     * `no-scrollbar` utility hides intrusive native scrollbars while preserving
+       inertial touch flick on iOS and Android.
+
+
+6. OPTICAL RACK-FOCUS & DEPTH-OF-FIELD ENGINE (StudentProfileCard.tsx)
+--------------------------------------------------------------------------------
+Rather than treating cards with a binary "active / inactive" toggle, the Student
+Team section uses a continuous optical focus ratio formula (`focusRatio` or `r`),
+which mirrors the optical rack-focus of a physical cinema camera lens.
+
+A. Real-Time Distance Calculation:
+   - On every scroll event (throttled via `requestAnimationFrame` to avoid layout
+     thrashing), `updateFocusRatios()` executes:
+       1. Batches all card `getBoundingClientRect()` reads in a single pass.
+       2. Computes distance between each card center and track center:
+          `distance = Math.abs(cardCenterX - centerX)`
+       3. Normalizes against a maximum threshold (`maxDist = cardWidth * 1.5 = 420px`):
+          `ratio = Math.min(1, Math.max(0, distance / maxDist))`
+       4. Resulting value `r` ranges smoothly between `0.0` (dead-center) and
+          `1.0` (periphery / off-center).
+
+B. Optical Shader Formulae:
+   Each visual property on the card is mapped continuously as a function of `r`:
+
+   ┌────────────────┬────────────────────────────┬─────────────────────────────┐
+   │ Property       │ Mathematical Function      │ Transition Range            │
+   ├────────────────┼────────────────────────────┼─────────────────────────────┤
+   │ Scale          │ scale = 1 - r * 0.18       │ 1.0 (center) → 0.82 (edges) │
+   │ Blur           │ blur = r * 3px             │ 0.0px (sharp) → 3.0px blur  │
+   │ Saturation     │ saturate = 1 - r * 0.5     │ 1.0 (vibrant) → 0.5 (muted) │
+   │ Brightness     │ brightness = 1 - r * 0.3   │ 1.0 (bright) → 0.7 (dimmed) │
+   │ Opacity        │ opacity = 1 - r * 0.4      │ 1.0 (solid) → 0.6 (faded)   │
+   └────────────────┴────────────────────────────┴─────────────────────────────┘
+
+C. Focused State Activation (r < 0.15):
+   When a card enters the central focal threshold (`r < 0.15`), micro-interactions
+   trigger:
+   - Avatar Frame Expansion:
+     * Width & Height scale up from 6rem (96px) to 7.5rem (120px).
+     * Border switches from dashed muted gold (`rgba(217, 169, 74, 0.4)`) to solid
+       high-contrast `--gold`.
+     * Radial glow illuminates:
+       `boxShadow: 0 0 20px rgba(217, 169, 74, 0.35), 0 0 40px rgba(217, 169, 74, 0.15)`
+   - Hover Gradient Ring:
+     * An outer gradient perimeter (`from-[rgba(217,169,74,0.5)] to-[rgba(124,156,240,0.5)]`)
+       fades in on hover with 300ms transition.
+
+
+7. CONSTELLATION CANVAS BACKDROP (ConstellationBackground.tsx)
+--------------------------------------------------------------------------------
+Behind the student reel and leadership cards sits a bespoke HTML5 Canvas 2D
+particle simulation that reinforces the "connected network" theme of AppForge.
+
+A. Node Physics:
+   - Density: 32 nodes on desktop (viewport >= 640px), 16 nodes on mobile.
+   - Size: Random radius between 1.5px and 3.0px.
+   - Opacity: Ambient opacity between 0.15 and 0.25 white.
+   - Velocity: Ambient Brownian drift with velocity damping (0.997) and minimum
+     speed injection to prevent stagnancy.
+   - Wrap Boundaries: Nodes that drift off-canvas wrap around to the opposing
+     edge with a 10px buffer.
+
+B. Proximity Line Meshing & Cursor Repulsion:
+   - Inter-node Connections:
+     * Lines draw between any two nodes within `LINE_PROXIMITY = 140px`.
+     * Line opacity scales with distance: `opacity = 0.04 * (1 - dist / 140)`.
+   - Cursor Repulsion (Desktop):
+     * Cursor position is tracked across the section container.
+     * Within `REPULSION_RADIUS = 150px`, nodes experience inverse linear
+       repulsion force (`strength = 0.6`), smoothly fleeing the cursor.
+     * Proximity of cursor to line midpoints boosts connection opacity up to 0.12.
+
+C. Closest-Approach "Spark" Detection:
+   - When two drifting nodes achieve their point of closest approach (distance
+     was decreasing, now increasing) within a tight 56px threshold, a kinetic
+     "Spark" event is created.
+   - Duration: 400ms.
+   - Color: Transitions from white to AppForge Amber (`#d9a94a`).
+   - Pulse: Follows a sinusoidal curve `peakOpacity * sin(progress * PI)` with
+     peak opacity capped at 0.18 (deliberately dimmer than the reel card glow to
+     maintain visual hierarchy).
+
+
+8. USER INTERACTION & PAGINATION CONTROLS
+--------------------------------------------------------------------------------
+The student section caters to three distinct input modalities:
+
+A. Mouse & Pointer Interaction:
+   - Hovering over a card halts drifting and focuses that student immediately.
+   - Clicking a card centers it with smooth inertia.
+   - Individual contact buttons inside the card utilize `e.stopPropagation()`:
+     clicking the telephone link or LinkedIn button executes the communication
+     action directly without disturbing reel scroll positioning.
+
+B. Keyboard Navigation:
+   - The scroll track is accessible via standard tab index (`tabIndex={0}`).
+   - Left Arrow (`ArrowLeft`): Steps focus back to the preceding student card.
+   - Right Arrow (`ArrowRight`): Steps focus forward to the subsequent student card.
+   - Keys prevent default page horizontal scrolling (`e.preventDefault()`).
+
+C. Pagination Indicator Dots:
+   - Below the reel track sits a centered `role="tablist"` dot array.
+   - Inactive Dots: 8px wide, subtle white pill (`rgba(255, 255, 255, 0.15)`).
+   - Active Focused Dot: Expands smoothly to 24px wide, illuminated in solid
+     AppForge Gold (`var(--gold)`).
+   - Fully interactive: clicking or hovering any dot immediately brings the
+     corresponding student card to center focus.
+
+
+9. ACCESSIBILITY, RESPONSIVENESS & REDUCED-MOTION
+--------------------------------------------------------------------------------
+A. Screen Reader Optimization (a11y):
+   - Semantic container marked with `role="region"` and descriptive `aria-label`:
+     "Student team, use arrow keys or swipe to browse".
+   - Each card has `role="group"` with an explicit computed label:
+     `aria-label="Akshay K, Main Student Co-ordinator. 1 of 5"`.
+   - Indicator dots are marked with `role="tab"` and `aria-selected` booleans.
+   - Phone links provide standard `tel:` protocols; LinkedIn links open in new
+     tabs with `rel="noreferrer"` and descriptive `aria-label` tags.
+
+B. Prefers-Reduced-Motion Compliance (`prefers-reduced-motion: reduce`):
+   - Media query listener (`window.matchMedia`) instantly disables autonomous
+     continuous drifting.
+   - `StudentProfileCard` scales and filters lock to neutral states without
+     abrupt jarring transitions.
+   - Canvas background halts particle velocity updates and spark calculations,
+     freezing nodes in an elegant, static constellation pattern.
+
+C. Mobile & Tablet Adaptations:
+   - Touch Gestures: `onTouchStart` pauses reel drift to give the user complete
+     tactile control over native finger swiping.
+   - Node Count: Halved on mobile (from 32 down to 16) to conserve battery and
+     maintain 60fps on mobile GPUs.
+   - Spacing: Responsive clamp padding `clamp(4rem, 10vw, 8rem)` prevents layout
+     cramping on smaller displays.
+
+
+10. PERFORMANCE OPTIMIZATION & GPU COMPOSITING
+--------------------------------------------------------------------------------
+1. Zero Layout Thrashing:
+   `getBoundingClientRect()` queries are executed in a single synchronized read
+   pass per animation frame. No interleaved style mutations occur.
+
+2. Hardware Acceleration & Compositing:
+   The cards declare `willChange: "transform, filter, opacity"`. This instructs
+   the browser rendering engine (Chromium / WebKit / Gecko) to promote each card
+   to its own GPU compositing layer, preventing expensive repaint passes of the
+   frosted glass backdrop.
+
+3. Viewport Throttling via IntersectionObserver:
+   Both the `StudentTeamReel` and the `ConstellationBackground` attach
+   `IntersectionObserver` listeners to the `<section id="people">` wrapper.
+   Whenever the user scrolls past the section, animation loops immediately
+   suspend, reducing background CPU/GPU utilization to 0.0%.
+
+4. DPR Clamping:
+   The constellation canvas explicitly clamps device pixel ratio:
+   `dpr = Math.min(window.devicePixelRatio || 1, 2)`.
+   This prevents performance degradation on high-density displays (e.g. Apple
+   Retina 3x displays) while preserving razor-sharp vector line rendering.
+
+
+11. ARCHITECTURAL COMPARISON: FACULTY TIERS VS. STUDENT REEL
+--------------------------------------------------------------------------------
+The parent `People.tsx` section intentionally juxtaposes two distinct visual
+philosophies:
+
+┌─────────────────────┬───────────────────────────┬────────────────────────────┐
+│ Aspect              │ Leadership / Faculty Tier │ Student Core Team Reel     │
+├─────────────────────┼───────────────────────────┼────────────────────────────┤
+│ Component           │ <PersonCard />            │ <StudentProfileCard />     │
+│ Layout Structure    │ 2 or 3-column static grid │ 1D horizontal kinetic reel │
+│ Avatar Treatment    │ Initials inside 48px circle│ Expandable dashed/gold halo│
+│ Interaction Model   │ Static hover lift (-6px)  │ Optical rack-focus & drift │
+│ Animation Trigger   │ Scroll reveal on enter    │ Continuous rAF drift loop  │
+│ Contact Methods     │ Institutional roles only  │ Direct phone + LinkedIn    │
+│ Target Atmosphere   │ Formal, authoritative     │ Dynamic, approachable, agile│
+└─────────────────────┴───────────────────────────┴────────────────────────────┘
+
+This intentional contrast reinforces the organizational structure: institutional
+leadership provides the steadfast foundation, while the student team provides
+the energetic, kinetic momentum powering the AppForge hackathon.
+================================================================================
+                                END OF DOCUMENT
+================================================================================
