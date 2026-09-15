@@ -56,7 +56,7 @@ export default function ScrollScrubHero() {
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
     const dw = img.naturalWidth * s * dpr;
     const dh = img.naturalHeight * s * dpr;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
