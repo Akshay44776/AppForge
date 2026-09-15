@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Countdown from "./Countdown";
+import BlueprintBackground from "./BlueprintBackground";
 import { EVENT_DATE } from "@/lib/site";
 
 function Dossier({
@@ -62,8 +63,9 @@ function Dossier({
 
 export default function Tracks() {
   return (
-    <section id="tracks" className="relative section-pad">
-      <div className="wrap">
+    <section id="tracks" className="relative section-pad overflow-hidden">
+      <BlueprintBackground />
+      <div className="wrap relative z-10">
         <p className="kicker mb-3">Kept under wraps</p>
         <h2 className="font-display text-3xl sm:text-5xl leading-tight">Three problem statements</h2>
         <p className="mt-5 text-muted leading-relaxed" style={{ maxWidth: "65ch" }}>
