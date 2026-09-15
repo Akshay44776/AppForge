@@ -135,30 +135,36 @@ export default function ScrollScrubHero() {
 
   return (
     <section id="teaser" ref={wrapRef} style={{ height: "560vh" }}
-             className="relative">
-      <div className="sticky top-0 h-[100dvh] overflow-hidden bg-ink">
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden />
-        {!ready && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink">
-            <div className="w-56 h-[3px] bg-surface2 rounded overflow-hidden">
-              <div className="h-full bg-gold transition-all" style={{ width: `${(loaded / FRAME_COUNT) * 100}%` }} />
+             className="relative bg-ink">
+      <div className="sticky top-0 h-[100dvh] w-full overflow-hidden flex flex-col items-center justify-center">
+        
+        {/* Cinematic 16:9 Container */}
+        <div className="relative w-full max-w-[100vw] aspect-video max-h-[100dvh]">
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden />
+          
+          {!ready && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/80 backdrop-blur-sm z-10">
+              <div className="w-48 sm:w-56 h-[3px] bg-surface2 rounded overflow-hidden">
+                <div className="h-full bg-gold transition-all" style={{ width: `${(loaded / FRAME_COUNT) * 100}%` }} />
+              </div>
+              <p className="text-[10px] sm:text-xs text-muted tracking-widest uppercase">
+                Loading frames {loaded}/{FRAME_COUNT}
+              </p>
             </div>
-            <p className="text-xs text-muted tracking-widest uppercase">
-              Loading frames {loaded}/{FRAME_COUNT}
+          )}
+          
+          {BEATS.map((text, i) => (
+            <p
+              key={i}
+              className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-4 sm:px-6 text-center font-display text-lg sm:text-xl md:text-3xl text-paper max-w-3xl mx-auto pointer-events-none drop-shadow-lg"
+              style={{ opacity: beatOpacity(i, progress), transition: "opacity 150ms linear" }}
+              aria-hidden={beatOpacity(i, progress) < 0.05}
+            >
+              <span className="text-gold mr-2 sm:mr-3 block sm:inline">0{i + 1}</span>
+              {text}
             </p>
-          </div>
-        )}
-        {BEATS.map((text, i) => (
-          <p
-            key={i}
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 px-6 text-center font-display text-xl sm:text-3xl text-paper max-w-3xl mx-auto pointer-events-none"
-            style={{ opacity: beatOpacity(i, progress), transition: "opacity 150ms linear" }}
-            aria-hidden={beatOpacity(i, progress) < 0.05}
-          >
-            <span className="text-gold mr-3">0{i + 1}</span>
-            {text}
-          </p>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
