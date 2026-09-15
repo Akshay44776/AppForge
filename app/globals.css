@@ -16,8 +16,6 @@
 
 html { 
   scroll-behavior: smooth; 
-  overflow-x: hidden;
-  width: 100%;
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -28,9 +26,6 @@ body {
   color: var(--paper);
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-  width: 100%;
-  position: relative;
 }
 
 ::selection { background: rgba(217, 169, 74, 0.35); color: var(--paper); }
