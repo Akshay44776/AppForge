@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import WallCard, { type JudgingCriterion } from "./WallCard";
+import SimulationBackground from "./SimulationBackground";
 
 /* ═══════════════════════════════════════════
    Icons
@@ -139,6 +140,7 @@ export default function JudgingWall() {
 
   return (
     <section id="evaluation" className="section-pad relative overflow-hidden">
+      <SimulationBackground variant="judging" />
       {/* Background radial glow */}
       <div 
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-[400px] pointer-events-none opacity-40 blur-[80px]"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import SimulationBackground from "./SimulationBackground";
 
 /* ═══════════════════════════════════════════
    Data
@@ -168,7 +169,8 @@ export default function TwistDeck() {
 
   return (
     <section id="twistdeck" className="relative section-pad">
-      <div className="wrap">
+      <SimulationBackground variant="twist" />
+      <div className="wrap relative z-10">
         <p className="kicker mb-3">The mechanic</p>
         <h2 className="font-display text-3xl sm:text-5xl leading-tight">The Twist Deck & Rounds</h2>
         <p className="mt-5 text-muted leading-relaxed" style={{ maxWidth: "65ch" }}>

@@ -27,7 +27,7 @@ export default function Countdown({
 
   const cell = (v: number, label: string) => (
     <div className="flex flex-col items-center">
-      <span className="font-display text-2xl sm:text-3xl text-paper tabular-nums">
+      <span className="font-display text-2xl sm:text-3xl text-paper tabular-nums" suppressHydrationWarning>
         {String(v).padStart(2, "0")}
       </span>
       <span className="text-[11px] uppercase tracking-widest text-muted">{label}</span>

@@ -1,3 +1,5 @@
+import SimulationBackground from "./SimulationBackground";
+
 const STATS = [
   ["₹50,000", "Prize pool"],
   ["1 day", "Format"],
@@ -7,8 +9,9 @@ const STATS = [
 
 export default function Prizes() {
   return (
-    <section id="prizes" className="section-pad bg-surface/40 border-y border-line">
-      <div className="wrap">
+    <section id="prizes" className="section-pad bg-surface/40 border-y border-line relative overflow-hidden">
+      <SimulationBackground variant="prizes" />
+      <div className="wrap relative z-10">
         <p className="kicker mb-3">Prizes</p>
         <h2 className="font-display text-3xl sm:text-5xl leading-tight">Win big at AppForge</h2>
         <p className="mt-8 font-display text-6xl sm:text-8xl text-gold">₹50,000</p>
