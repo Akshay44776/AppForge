@@ -56,7 +56,7 @@ export default function ScrollScrubHero() {
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
     const dw = img.naturalWidth * s * dpr;
     const dh = img.naturalHeight * s * dpr;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -134,9 +134,9 @@ export default function ScrollScrubHero() {
   }
 
   return (
-    <section id="teaser" ref={wrapRef} style={{ height: isMobile ? "360vh" : "560vh" }}
+    <section id="teaser" ref={wrapRef} style={{ height: "560vh" }}
              className="relative">
-      <div className="sticky top-0 h-screen overflow-hidden bg-ink">
+      <div className="sticky top-0 h-[100dvh] overflow-hidden bg-ink">
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden />
         {!ready && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink">
