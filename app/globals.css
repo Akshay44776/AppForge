@@ -345,3 +345,41 @@ body {
     transition: opacity 0.2s ease !important;
   }
 }
+
+/* ==========================================================================
+   Student Team — Infinite Marquee
+   ========================================================================== */
+
+@keyframes student-marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.student-marquee-track {
+  animation: student-marquee-scroll 30s linear infinite;
+  will-change: transform;
+}
+
+/* Pause on hover (desktop) */
+.student-marquee-viewport:hover .student-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Pause on touch (mobile) — applied via active state */
+.student-marquee-viewport:active .student-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Reduced motion: stop animation, show as centered flex wrap */
+@media (prefers-reduced-motion: reduce) {
+  .student-marquee-track {
+    animation: none !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: auto !important;
+  }
+  /* Hide the duplicate set under reduced motion */
+  .student-marquee-track > [aria-hidden="true"] {
+    display: none;
+  }
+}

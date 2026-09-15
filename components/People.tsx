@@ -97,22 +97,47 @@ export default function People() {
             ))}
           </div>
 
-          {/* Student Team */}
+          {/* Student Team — Infinite Marquee */}
           <div>
             <div className="text-center mb-10">
               <h3 className="text-[13px] uppercase tracking-[0.08em] text-gold font-bold">Student Team</h3>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-              {STUDENT_TEAM.map((student, idx) => (
-                <StudentProfileCard
-                  key={student.name}
-                  name={student.name}
-                  role={student.role || ''}
-                  tel={student.tel}
-                  linkedin={student.linkedin}
-                  imgUrl={student.imgUrl}
-                />
-              ))}
+
+            {/* Marquee viewport with edge fade masks */}
+            <div
+              className="student-marquee-viewport relative overflow-hidden"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
+              }}
+            >
+              {/* Marquee track — duplicated once for seamless loop */}
+              <div className="student-marquee-track flex gap-6 sm:gap-8 w-max hover:[animation-play-state:paused]">
+                {/* First set */}
+                {STUDENT_TEAM.map((student) => (
+                  <div key={`set1-${student.name}`} className="flex-shrink-0 w-[260px] sm:w-[280px]">
+                    <StudentProfileCard
+                      name={student.name}
+                      role={student.role || ''}
+                      tel={student.tel}
+                      linkedin={student.linkedin}
+                      imgUrl={student.imgUrl}
+                    />
+                  </div>
+                ))}
+                {/* Duplicate set for seamless loop */}
+                {STUDENT_TEAM.map((student) => (
+                  <div key={`set2-${student.name}`} className="flex-shrink-0 w-[260px] sm:w-[280px]" aria-hidden="true">
+                    <StudentProfileCard
+                      name={student.name}
+                      role={student.role || ''}
+                      tel={student.tel}
+                      linkedin={student.linkedin}
+                      imgUrl={student.imgUrl}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
