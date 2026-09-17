@@ -212,9 +212,13 @@ export default function Tracks() {
 
   const handleCardClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
+    // Anchor the burst in the open background band just above the card, and
+    // hand over the card's size so the phone wireframe scales to the grid.
     constellationRef.current?.triggerBurst(
       rect.left + rect.width / 2,
-      rect.top + rect.height / 2
+      rect.top - 32,
+      rect.width,
+      rect.height
     );
   }, []);
 

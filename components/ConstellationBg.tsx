@@ -3,17 +3,37 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ConstellationBg — 2.5D Cinematic Plexus with Burst
-   
-   Background: Elegant, sparse depth-of-field bokeh network (like Image 5). 
-   Nodes have Z-depth which affects their size, blur, and parallax speed.
-   
-   Click Burst (Image 2): Summons a bright glowing phone wireframe and 
-   sweeping thick golden light arcs.
+   ConstellationBg — 2.5D Cinematic Plexus with Card-Click Burst
+
+   TWO CANVAS LAYERS
+     1. Ambient layer (z-0, behind the cards)
+        Dense depth-of-field amber plexus. Nodes carry a Z depth that drives
+        their size, softness and parallax speed. A faint warm haze sits along
+        the top band of the section.
+
+     2. FX layer (z-25, ABOVE the cards, additive blending)
+        Fired by triggerBurst(). Thick golden light ribbons sweep out from an
+        anchor point just above the clicked card while a large phone wireframe
+        traces itself in, holds, then fades. Because it composites in "lighter"
+        mode the light reads over the card surfaces exactly like the reference.
+
+   Both layers are pointer-events:none, so nothing about the section's
+   interaction model changes.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export type ConstellationBgHandle = {
-  triggerBurst: (clientX: number, clientY: number) => void;
+  /**
+   * @param clientX  anchor X (card centre)
+   * @param clientY  anchor Y (a little above the card's top edge)
+   * @param cardW    clicked card width  — scales the phone wireframe
+   * @param cardH    clicked card height — positions the phone wireframe
+   */
+  triggerBurst: (
+    clientX: number,
+    clientY: number,
+    cardW?: number,
+    cardH?: number
+  ) => void;
 };
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
@@ -36,12 +56,17 @@ type LightArc = {
   intensity: number;
   width: number;
   decay: number;
+  tail: number;
 };
 
 type BurstFlash = {
-  x: number; y: number;
-  intensity: number;
-  phoneAlpha: number;
+  active: boolean;
+  x: number; y: number;       // burst origin (the bright node)
+  cx: number; cy: number;     // phone centre
+  w: number; h: number;       // phone size
+  tilt: number;
+  age: number;                // seconds since fired
+  intensity: number;          // bloom
 };
 
 /* ─── Color constants ──────────────────────────────────────────────────── */
@@ -53,54 +78,64 @@ function rgba(r: number, g: number, b: number, a: number) {
   return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a)).toFixed(4)})`;
 }
 
-/* ─── Configuration ────────────────────────────────────────────────────── */
-const DESKTOP_NODE_COUNT = 65;
-const MOBILE_NODE_COUNT = 30;
-const LINK_DISTANCE = 220;
+/* ─── Ambient configuration ────────────────────────────────────────────── */
+const DESKTOP_NODE_COUNT = 92;
+const MOBILE_NODE_COUNT = 34;
+const LINK_DISTANCE = 240;
 const BASE_DRIFT_SPEED = 0.1;
 const GLOW_DECAY = 0.985;
 const PARALLAX_STRENGTH = 40;
 
-/* Phone wireframe */
-const PHONE_W = 86;
-const PHONE_H = 160;
-const PHONE_RADIUS = 14;
-const PHONE_NOTCH_W = 32;
-const PHONE_NOTCH_H = 6;
+/* ─── Burst timing (seconds) ───────────────────────────────────────────── */
+const TRACE_DUR = 0.60;  // phone draws itself in
+const HOLD_UNTIL = 1.90; // fully lit
+const FADE_DUR = 1.30;   // then dissolves
+const BURST_LIFE = HOLD_UNTIL + FADE_DUR;
 
 const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fxCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number>(0);
   const inViewRef = useRef(true);
 
   const nodesRef = useRef<Node[]>([]);
   const arcsRef = useRef<LightArc[]>([]);
-  const flashRef = useRef<BurstFlash>({ x: 0, y: 0, intensity: 0, phoneAlpha: 0 });
-  const pendingBurstRef = useRef<{ x: number; y: number } | null>(null);
-  
+  const flashRef = useRef<BurstFlash>({
+    active: false, x: 0, y: 0, cx: 0, cy: 0,
+    w: 0, h: 0, tilt: 0, age: 0, intensity: 0,
+  });
+  const pendingBurstRef = useRef<
+    { x: number; y: number; cardW: number; cardH: number } | null
+  >(null);
+  const fxDirtyRef = useRef(false);
+
   const sizeRef = useRef({ w: 0, h: 0 });
-  const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 }); // current & target mouse
+  const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const dprRef = useRef(1);
 
   useImperativeHandle(ref, () => ({
-    triggerBurst(clientX: number, clientY: number) {
-      const canvas = canvasRef.current;
+    triggerBurst(clientX: number, clientY: number, cardW = 320, cardH = 420) {
+      const canvas = bgCanvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       pendingBurstRef.current = {
         x: clientX - rect.left,
         y: clientY - rect.top,
+        cardW,
+        cardH,
       };
     },
   }));
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const bgCanvas = bgCanvasRef.current;
+    const fxCanvas = fxCanvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!bgCanvas || !fxCanvas || !container) return;
+    const ctx = bgCanvas.getContext("2d");
+    const fx = fxCanvas.getContext("2d");
+    if (!ctx || !fx) return;
 
     const isMobile = () => window.innerWidth < 768;
 
@@ -114,7 +149,7 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         nodes.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          z: Math.random(), // 0 to 1
+          z: Math.random(),
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           baseRadius: 1.5 + Math.random() * 2,
@@ -130,21 +165,23 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
       dprRef.current = Math.min(window.devicePixelRatio || 1, 2);
       const w = rect.width;
       const h = rect.height;
-      canvas!.width = w * dprRef.current;
-      canvas!.height = h * dprRef.current;
-      canvas!.style.width = `${w}px`;
-      canvas!.style.height = `${h}px`;
+      for (const c of [bgCanvas!, fxCanvas!]) {
+        c.width = w * dprRef.current;
+        c.height = h * dprRef.current;
+        c.style.width = `${w}px`;
+        c.style.height = `${h}px`;
+      }
       ctx!.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0);
+      fx!.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0);
       sizeRef.current = { w, h };
       if (nodesRef.current.length === 0) buildNodes(w, h);
     }
     resize();
     window.addEventListener("resize", resize, { passive: true });
 
-    /* ─── Mouse tracking ───────────────────────────────────────────── */
+    /* ─── Mouse tracking (parallax) ────────────────────────────────── */
     function onMouseMove(e: MouseEvent) {
-      const rect = canvas!.getBoundingClientRect();
-      // Normalized -1 to 1
+      const rect = bgCanvas!.getBoundingClientRect();
       mouseRef.current.tx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.ty = ((e.clientY - rect.top) / rect.height) * 2 - 1;
     }
@@ -156,16 +193,17 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
     );
     io.observe(container);
 
-    /* ─── Apply burst ──────────────────────────────────────────────── */
+    /* ─── Fire a burst ─────────────────────────────────────────────── */
     function applyBurst() {
       const burst = pendingBurstRef.current;
       if (!burst) return;
       pendingBurstRef.current = null;
 
+      const { w } = sizeRef.current;
       const nodes = nodesRef.current;
-      const burstR = 400;
+      const burstR = 480;
 
-      // Flare nearby nodes
+      /* Flare surrounding ambient nodes */
       nodes.forEach((n) => {
         const dx = n.x - burst.x;
         const dy = n.y - burst.y;
@@ -176,62 +214,101 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         }
       });
 
-      // Spawn arcs
-      const arcCount = isMobile() ? 12 : 24;
+      /* Long sweeping light ribbons */
+      arcsRef.current.length = 0;
+      const arcCount = isMobile() ? 16 : 34;
+      const reach = Math.max(420, w * 0.62);
       const newArcs: LightArc[] = [];
       for (let i = 0; i < arcCount; i++) {
-        const angle = (i / arcCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-        const len = 150 + Math.random() * 350;
-        const endX = burst.x + Math.cos(angle) * len;
-        const endY = burst.y + Math.sin(angle) * len;
+        const angle =
+          (i / arcCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+        const len = reach * (0.45 + Math.random() * 0.85);
 
-        const perpAngle = angle + (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.8);
-        const perpDist = len * (0.2 + Math.random() * 0.4);
+        /* Squash vertically so the ribbons fan out sideways like the reference */
+        const endX = burst.x + Math.cos(angle) * len;
+        const endY = burst.y + Math.sin(angle) * len * 0.66;
+
+        const perpAngle =
+          angle + (Math.random() > 0.5 ? 1 : -1) * (0.35 + Math.random() * 0.75);
+        const perpDist = len * (0.16 + Math.random() * 0.34);
         const midX = (burst.x + endX) / 2 + Math.cos(perpAngle) * perpDist;
-        const midY = (burst.y + endY) / 2 + Math.sin(perpAngle) * perpDist;
+        const midY = (burst.y + endY) / 2 + Math.sin(perpAngle) * perpDist * 0.7;
 
         newArcs.push({
           ox: burst.x, oy: burst.y,
           cx: midX, cy: midY,
           ex: endX, ey: endY,
           progress: 0,
-          speed: 0.8 + Math.random() * 1.5,
-          intensity: 0.7 + Math.random() * 0.3,
-          width: 2 + Math.random() * 3,
-          decay: 0.94 + Math.random() * 0.04,
+          speed: 0.55 + Math.random() * 0.75,
+          intensity: 0.75 + Math.random() * 0.25,
+          width: 2.2 + Math.random() * 3.4,
+          decay: 0.975 + Math.random() * 0.015,
+          tail: 0.55 + Math.random() * 0.35,
         });
       }
       arcsRef.current.push(...newArcs);
 
-      flashRef.current = { x: burst.x, y: burst.y, intensity: 1.0, phoneAlpha: 1.0 };
+      /* Large phone wireframe, anchored above the clicked card */
+      const phoneW = Math.min(240, Math.max(140, burst.cardW * 0.62));
+      const phoneH = phoneW * 1.9;
+      const phoneBottom = burst.y + 32 + burst.cardH * 0.36;
+
+      flashRef.current = {
+        active: true,
+        x: burst.x,
+        y: burst.y,
+        cx: burst.x,
+        cy: phoneBottom - phoneH / 2,
+        w: phoneW,
+        h: phoneH,
+        tilt: -0.085,
+        age: 0,
+        intensity: 1,
+      };
     }
 
-    /* ─── Render Frame ─────────────────────────────────────────────── */
-    function renderFrame() {
+    /* ─── Rounded-rect path helper (traceable) ─────────────────────── */
+    function roundedRectPath(
+      c: CanvasRenderingContext2D,
+      x: number, y: number, w: number, h: number, r: number
+    ) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.lineTo(x + w - r, y);
+      c.quadraticCurveTo(x + w, y, x + w, y + r);
+      c.lineTo(x + w, y + h - r);
+      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      c.lineTo(x + r, y + h);
+      c.quadraticCurveTo(x, y + h, x, y + h - r);
+      c.lineTo(x, y + r);
+      c.quadraticCurveTo(x, y, x + r, y);
+    }
+
+    /* ─── Ambient layer ────────────────────────────────────────────── */
+    function renderAmbient() {
       const { w, h } = sizeRef.current;
       const nodes = nodesRef.current;
-      const arcs = arcsRef.current;
-      const flash = flashRef.current;
       const m = mouseRef.current;
 
-      // Smooth mouse for parallax
       m.x += (m.tx - m.x) * 0.05;
       m.y += (m.ty - m.y) * 0.05;
 
       ctx!.clearRect(0, 0, w, h);
 
-      // Pre-calculate parallax positions
-      const renderNodes = nodes.map(n => {
-        // Closer nodes (z -> 0) move more, distant nodes (z -> 1) move less
+      /* Warm haze across the upper band */
+      const haze = ctx!.createLinearGradient(0, 0, 0, h * 0.55);
+      haze.addColorStop(0, rgba(168, 108, 34, 0.14));
+      haze.addColorStop(0.45, rgba(150, 96, 30, 0.05));
+      haze.addColorStop(1, rgba(150, 96, 30, 0));
+      ctx!.fillStyle = haze;
+      ctx!.fillRect(0, 0, w, h * 0.55);
+
+      const renderNodes = nodes.map((n) => {
         const pFactor = (1 - n.z) * PARALLAX_STRENGTH;
-        return {
-          ...n,
-          px: n.x + m.x * pFactor,
-          py: n.y + m.y * pFactor,
-        };
+        return { ...n, px: n.x + m.x * pFactor, py: n.y + m.y * pFactor };
       });
 
-      // 1. Draw connections
+      /* 1. Connections */
       const linkDistSq = LINK_DISTANCE * LINK_DISTANCE;
       for (let i = 0; i < renderNodes.length; i++) {
         const a = renderNodes[i];
@@ -241,27 +318,24 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
           const dy = a.py - b.py;
           const distSq = dx * dx + dy * dy;
           if (distSq > linkDistSq) continue;
-
-          // Only connect if they are reasonably close in Z depth to avoid mess
           if (Math.abs(a.z - b.z) > 0.4) continue;
 
           const dist = Math.sqrt(distSq);
           const distFactor = 1 - dist / LINK_DISTANCE;
           const avgZ = (a.z + b.z) / 2;
           const avgGlow = (a.glow + b.glow) / 2;
-          
-          // Distant lines are fainter
-          const zAlpha = 1 - (avgZ * 0.6);
-          const baseAlpha = distFactor * 0.2 * zAlpha;
+
+          const zAlpha = 1 - avgZ * 0.55;
+          const baseAlpha = distFactor * 0.3 * zAlpha;
           const alpha = Math.min(1, baseAlpha + avgGlow * 0.8);
           if (alpha < 0.01) continue;
 
-          const lw = (1 - avgZ) * 1.5 + avgGlow * 2.5 + 0.5;
+          const lw = (1 - avgZ) * 1.6 + avgGlow * 2.5 + 0.5;
 
           ctx!.beginPath();
           ctx!.moveTo(a.px, a.py);
           ctx!.lineTo(b.px, b.py);
-          
+
           if (avgGlow > 0.1) {
             ctx!.strokeStyle = rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, alpha);
             ctx!.lineWidth = lw;
@@ -271,141 +345,191 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
             ctx!.stroke();
             ctx!.restore();
           } else {
-            // Richer amber for ambient lines
-            ctx!.strokeStyle = rgba(230, 160, 60, alpha);
+            ctx!.strokeStyle = rgba(232, 164, 62, alpha);
             ctx!.lineWidth = lw;
             ctx!.stroke();
           }
         }
       }
 
-      // 2. Draw cinematic bokeh nodes
+      /* 2. Bokeh nodes */
       for (const n of renderNodes) {
-        // Distant nodes are larger but softer (bokeh effect)
-        const bokehSize = n.baseRadius + (n.z * 6);
+        const bokehSize = n.baseRadius + n.z * 6;
         const r = bokehSize + n.glow * 5;
-        
-        // Depth affects alpha (distant = dimmer)
-        const zAlpha = 1 - (n.z * 0.5);
-        const alpha = Math.min(1, (0.4 * zAlpha) + n.glow);
+        const zAlpha = 1 - n.z * 0.5;
+        const alpha = Math.min(1, 0.5 * zAlpha + n.glow);
 
         if (n.z > 0.5 && n.glow < 0.1) {
-          // Out of focus soft bokeh
-          const grad = ctx!.createRadialGradient(n.px, n.py, 0, n.px, n.py, r * 1.5);
-          grad.addColorStop(0, rgba(230, 160, 60, alpha * 0.5));
-          grad.addColorStop(1, rgba(230, 160, 60, 0));
+          const grad = ctx!.createRadialGradient(n.px, n.py, 0, n.px, n.py, r * 1.6);
+          grad.addColorStop(0, rgba(232, 164, 62, alpha * 0.55));
+          grad.addColorStop(1, rgba(232, 164, 62, 0));
           ctx!.fillStyle = grad;
           ctx!.beginPath();
-          ctx!.arc(n.px, n.py, r * 1.5, 0, Math.PI * 2);
+          ctx!.arc(n.px, n.py, r * 1.6, 0, Math.PI * 2);
           ctx!.fill();
         } else {
-          // Sharp foreground node or glowing node
+          // Halo only on the nearest / flaring nodes — keeps the frame cheap
+          if (n.z < 0.3 || n.glow > 0.05) {
+            const halo = ctx!.createRadialGradient(n.px, n.py, 0, n.px, n.py, r * 4);
+            halo.addColorStop(0, rgba(GOLD_R, GOLD_G, GOLD_B, alpha * 0.22));
+            halo.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
+            ctx!.fillStyle = halo;
+            ctx!.beginPath();
+            ctx!.arc(n.px, n.py, r * 4, 0, Math.PI * 2);
+            ctx!.fill();
+          }
+
           ctx!.beginPath();
           ctx!.fillStyle = rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, alpha);
           ctx!.arc(n.px, n.py, r, 0, Math.PI * 2);
           ctx!.fill();
-          
+
           if (n.glow > 0.1) {
             ctx!.beginPath();
-            ctx!.fillStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, n.glow * 0.8);
-            ctx!.arc(n.px, n.py, r * 0.4, 0, Math.PI * 2);
+            ctx!.fillStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, n.glow * 0.85);
+            ctx!.arc(n.px, n.py, r * 0.45, 0, Math.PI * 2);
             ctx!.fill();
           }
         }
       }
+    }
 
-      // 3. Draw light arcs (thick, sweeping, glowing)
+    /* ─── FX layer (over the cards) ────────────────────────────────── */
+    function renderFx() {
+      const { w, h } = sizeRef.current;
+      const arcs = arcsRef.current;
+      const flash = flashRef.current;
+
+      fx!.clearRect(0, 0, w, h);
+      if (!flash.active && arcs.length === 0) {
+        fxDirtyRef.current = false;
+        return;
+      }
+      fxDirtyRef.current = true;
+
+      /* Global life envelope: 1 while holding, then ease out */
+      const life =
+        flash.age <= HOLD_UNTIL
+          ? 1
+          : Math.max(0, 1 - (flash.age - HOLD_UNTIL) / FADE_DUR);
+      const ease = life * life;
+
+      fx!.save();
+      fx!.globalCompositeOperation = "lighter";
+
+      /* 1. Central bloom */
+      if (flash.active && flash.intensity > 0.01) {
+        const r = 300;
+        const grad = fx!.createRadialGradient(flash.x, flash.y, 0, flash.x, flash.y, r);
+        grad.addColorStop(0, rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, flash.intensity * 0.5));
+        grad.addColorStop(0.18, rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, flash.intensity * 0.2));
+        grad.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
+        fx!.fillStyle = grad;
+        fx!.beginPath();
+        fx!.arc(flash.x, flash.y, r, 0, Math.PI * 2);
+        fx!.fill();
+      }
+
+      /* 2. Sweeping light ribbons */
       for (const arc of arcs) {
-        if (arc.intensity < 0.01) continue;
+        const amp = arc.intensity * ease;
+        if (amp < 0.01) continue;
         const headT = Math.min(arc.progress, 1);
-        const tailT = Math.max(0, arc.progress - 0.5);
+        const tailT = Math.max(0, arc.progress - arc.tail);
         if (headT <= tailT) continue;
 
-        ctx!.save();
         for (let pass = 0; pass < 2; pass++) {
           const isGlow = pass === 0;
-          const alpha = isGlow ? arc.intensity * 0.15 : arc.intensity;
-          const lineW = isGlow ? arc.width * 6 : arc.width;
+          const alpha = isGlow ? amp * 0.16 : amp;
+          const lineW = isGlow ? arc.width * 6.5 : arc.width;
 
-          ctx!.strokeStyle = isGlow
+          fx!.strokeStyle = isGlow
             ? rgba(GOLD_R, GOLD_G, GOLD_B, alpha)
             : rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, alpha);
-          ctx!.lineWidth = lineW;
-          ctx!.lineCap = "round";
+          fx!.lineWidth = lineW;
+          fx!.lineCap = "round";
+          fx!.lineJoin = "round";
 
-          ctx!.beginPath();
-          let started = false;
-          for (let s = 0; s <= 20; s++) {
-            const t = tailT + (headT - tailT) * (s / 20);
+          fx!.beginPath();
+          for (let s = 0; s <= 24; s++) {
+            const t = tailT + (headT - tailT) * (s / 24);
             const mt = 1 - t;
             const px = mt * mt * arc.ox + 2 * mt * t * arc.cx + t * t * arc.ex;
             const py = mt * mt * arc.oy + 2 * mt * t * arc.cy + t * t * arc.ey;
-            if (!started) { ctx!.moveTo(px, py); started = true; }
-            else { ctx!.lineTo(px, py); }
+            if (s === 0) fx!.moveTo(px, py);
+            else fx!.lineTo(px, py);
           }
-          ctx!.stroke();
+          fx!.stroke();
         }
-        ctx!.restore();
       }
 
-      // 4. Draw phone wireframe + flash bloom
-      if (flash.phoneAlpha > 0.01) {
-        const { x, y, phoneAlpha, intensity } = flash;
-        
-        // Bloom
-        if (intensity > 0.01) {
-          const r = 250;
-          const grad = ctx!.createRadialGradient(x, y, 0, x, y, r);
-          grad.addColorStop(0, rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, intensity * 0.5));
-          grad.addColorStop(0.2, rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, intensity * 0.2));
-          grad.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
-          ctx!.fillStyle = grad;
-          ctx!.beginPath();
-          ctx!.arc(x, y, r, 0, Math.PI * 2);
-          ctx!.fill();
+      /* 3. Phone wireframe — traces itself in, then holds and fades */
+      if (flash.active) {
+        const trace = Math.min(1, flash.age / TRACE_DUR);
+        const teased = 1 - Math.pow(1 - trace, 3); // easeOutCubic
+        const pw = flash.w;
+        const ph = flash.h;
+        const pr = pw * 0.17;
+        const px = -pw / 2;
+        const py = -ph / 2;
+
+        const perim = 2 * (pw + ph) - 8 * pr + 2 * Math.PI * pr;
+
+        fx!.save();
+        fx!.translate(flash.cx, flash.cy);
+        fx!.rotate(flash.tilt);
+
+        /* Outer shell — two passes: soft bloom + bright core */
+        for (let pass = 0; pass < 2; pass++) {
+          const isGlow = pass === 0;
+          fx!.setLineDash([perim * teased, perim]);
+          fx!.lineDashOffset = 0;
+          fx!.lineCap = "round";
+          fx!.strokeStyle = isGlow
+            ? rgba(GOLD_R, GOLD_G, GOLD_B, ease * 0.3)
+            : rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, ease * 0.95);
+          fx!.lineWidth = isGlow ? 13 : 2.6;
+          roundedRectPath(fx!, px, py, pw, ph, pr);
+          fx!.stroke();
+        }
+        fx!.setLineDash([]);
+
+        /* Interior details fade in once the shell is mostly drawn */
+        const detail = Math.max(0, (teased - 0.55) / 0.45) * ease;
+        if (detail > 0.01) {
+          /* Speaker bar */
+          const sw = pw * 0.3;
+          fx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, detail * 0.9);
+          fx!.lineWidth = 2;
+          fx!.beginPath();
+          fx!.roundRect(-sw / 2, py + ph * 0.045, sw, Math.max(3, ph * 0.012), 3);
+          fx!.stroke();
+
+          /* Inner screen rim */
+          fx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, detail * 0.42);
+          fx!.lineWidth = 1.2;
+          fx!.beginPath();
+          fx!.roundRect(
+            px + pw * 0.07, py + ph * 0.075,
+            pw * 0.86, ph * 0.86,
+            pr * 0.72
+          );
+          fx!.stroke();
+
+          /* Home indicator */
+          fx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, detail * 0.6);
+          fx!.lineWidth = 2.4;
+          fx!.lineCap = "round";
+          fx!.beginPath();
+          fx!.moveTo(-pw * 0.16, py + ph * 0.955);
+          fx!.lineTo(pw * 0.16, py + ph * 0.955);
+          fx!.stroke();
         }
 
-        // Phone Wireframe
-        const px = x - PHONE_W / 2;
-        const py = y - PHONE_H / 2 - 40; // shift up slightly above cursor
-        const pr = PHONE_RADIUS;
-
-        ctx!.save();
-        ctx!.strokeStyle = rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, phoneAlpha);
-        ctx!.lineWidth = 2.5;
-        ctx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, phoneAlpha * 0.8);
-        ctx!.shadowBlur = 15;
-
-        // Outer shell
-        ctx!.beginPath();
-        ctx!.moveTo(px + pr, py);
-        ctx!.lineTo(px + PHONE_W - pr, py);
-        ctx!.quadraticCurveTo(px + PHONE_W, py, px + PHONE_W, py + pr);
-        ctx!.lineTo(px + PHONE_W, py + PHONE_H - pr);
-        ctx!.quadraticCurveTo(px + PHONE_W, py + PHONE_H, px + PHONE_W - pr, py + PHONE_H);
-        ctx!.lineTo(px + pr, py + PHONE_H);
-        ctx!.quadraticCurveTo(px, py + PHONE_H, px, py + PHONE_H - pr);
-        ctx!.lineTo(px, py + pr);
-        ctx!.quadraticCurveTo(px, py, px + pr, py);
-        ctx!.stroke();
-
-        // Notch
-        const nw = PHONE_NOTCH_W;
-        ctx!.lineWidth = 1.5;
-        ctx!.beginPath();
-        ctx!.roundRect(x - nw / 2, py + 10, nw, PHONE_NOTCH_H, 3);
-        ctx!.stroke();
-
-        // Inner screen rim
-        ctx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, phoneAlpha * 0.4);
-        ctx!.lineWidth = 1;
-        ctx!.shadowBlur = 0;
-        ctx!.beginPath();
-        ctx!.roundRect(px + 6, py + 22, PHONE_W - 12, PHONE_H - 34, pr - 4);
-        ctx!.stroke();
-
-        ctx!.restore();
+        fx!.restore();
       }
+
+      fx!.restore();
     }
 
     /* ─── Animation Loop ───────────────────────────────────────────── */
@@ -419,7 +543,7 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
       const arcs = arcsRef.current;
       const flash = flashRef.current;
 
-      // Drift nodes
+      /* Drift ambient nodes */
       for (const n of nodes) {
         n.x += n.vx;
         n.y += n.vy;
@@ -429,22 +553,30 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         if (n.glow < 0.001) n.glow = 0;
       }
 
-      // Advance arcs
+      /* Advance ribbons */
       for (let i = arcs.length - 1; i >= 0; i--) {
         const arc = arcs[i];
         arc.progress += arc.speed * 0.016;
         arc.intensity *= arc.decay;
-        if (arc.intensity < 0.005 || arc.progress > 2) {
+        if (arc.intensity < 0.004 || arc.progress > 1 + arc.tail + 0.2) {
           arcs.splice(i, 1);
         }
       }
 
-      // Decay flash
-      flash.intensity *= 0.96;
-      flash.phoneAlpha *= 0.985;
+      /* Advance burst */
+      if (flash.active) {
+        flash.age += 0.016;
+        flash.intensity *= 0.955;
+        if (flash.age > BURST_LIFE) {
+          flash.active = false;
+          arcs.length = 0;
+        }
+      }
 
       applyBurst();
-      renderFrame();
+      renderAmbient();
+      if (flash.active || arcs.length > 0 || fxDirtyRef.current) renderFx();
+
       rafRef.current = requestAnimationFrame(step);
     }
 
@@ -459,19 +591,42 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: "none",
-        overflow: "hidden",
-      }}
-      aria-hidden="true"
-    >
-      <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} />
-    </div>
+    <>
+      {/* Ambient plexus — sits behind the section content */}
+      <div
+        ref={containerRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+        aria-hidden="true"
+      >
+        <canvas
+          ref={bgCanvasRef}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        />
+      </div>
+
+      {/* Burst FX — sibling layer, so the light composites over the cards */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 25,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+        aria-hidden="true"
+      >
+        <canvas
+          ref={fxCanvasRef}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        />
+      </div>
+    </>
   );
 });
 
