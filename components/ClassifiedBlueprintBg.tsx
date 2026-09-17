@@ -568,9 +568,9 @@ function PostEffects({ tier }: { tier: Tier }) {
         mipmapBlur
         radius={0.55}
       />
-      {tier === "high" && (
+      {(tier === "high" && (
         <Noise opacity={POST.noiseOpacity} blendFunction={BlendFunction.OVERLAY} />
-      )}
+      )) as any}
       <Vignette
         eskil={false}
         offset={POST.vignetteOffset}

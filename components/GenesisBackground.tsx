@@ -182,9 +182,9 @@ function Post({ tier }: { tier: Tier }) {
       />
       {/* `cond && <X/>` yields `false`, which EffectComposer drops cleanly.
          An empty fragment would NOT be dropped and breaks the effect chain. */}
-      {tier === "high" && (
+      {(tier === "high" && (
         <Noise opacity={POST.noiseOpacity} blendFunction={BlendFunction.OVERLAY} />
-      )}
+      )) as any}
       <Vignette
         eskil={false}
         offset={0.28}

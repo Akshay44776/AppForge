@@ -59,8 +59,8 @@ export interface PhoneRigProps {
 
 export default function PhoneRig({ state, children }: PhoneRigProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const chassisMatRef = useRef<ChassisMaterialImpl>(null);
-  const glassMatRef = useRef<GlassMaterialImpl>(null);
+  const chassisMatRef = useRef<ChassisMaterialImpl | null>(null);
+  const glassMatRef = useRef<GlassMaterialImpl | null>(null);
 
   /* Materials are instantiated once and attached via <primitive>, which keeps
      us clear of JSX intrinsic-element augmentation entirely. */
