@@ -216,8 +216,8 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
 
       /* Long sweeping light ribbons */
       arcsRef.current.length = 0;
-      const arcCount = isMobile() ? 16 : 34;
-      const reach = Math.max(420, w * 0.62);
+      const arcCount = isMobile() ? 14 : 26;
+      const reach = Math.max(380, w * 0.52);
       const newArcs: LightArc[] = [];
       for (let i = 0; i < arcCount; i++) {
         const angle =
@@ -240,18 +240,18 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
           ex: endX, ey: endY,
           progress: 0,
           speed: 0.55 + Math.random() * 0.75,
-          intensity: 0.75 + Math.random() * 0.25,
-          width: 2.2 + Math.random() * 3.4,
+          intensity: 0.65 + Math.random() * 0.25,
+          width: 1.9 + Math.random() * 2.7,
           decay: 0.975 + Math.random() * 0.015,
           tail: 0.55 + Math.random() * 0.35,
         });
       }
       arcsRef.current.push(...newArcs);
 
-      /* Large phone wireframe, anchored above the clicked card */
-      const phoneW = Math.min(240, Math.max(140, burst.cardW * 0.62));
+      /* Large phone wireframe, centred on the grid, rising out from behind it */
+      const phoneW = Math.min(250, Math.max(160, burst.cardW * 0.66));
       const phoneH = phoneW * 1.9;
-      const phoneBottom = burst.y + 32 + burst.cardH * 0.36;
+      const phoneBottom = burst.y + burst.cardH * 0.42;
 
       flashRef.current = {
         active: true,
@@ -419,10 +419,10 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
 
       /* 1. Central bloom */
       if (flash.active && flash.intensity > 0.01) {
-        const r = 300;
+        const r = 220;
         const grad = fx!.createRadialGradient(flash.x, flash.y, 0, flash.x, flash.y, r);
-        grad.addColorStop(0, rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, flash.intensity * 0.5));
-        grad.addColorStop(0.18, rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, flash.intensity * 0.2));
+        grad.addColorStop(0, rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, flash.intensity * 0.32));
+        grad.addColorStop(0.18, rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, flash.intensity * 0.14));
         grad.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
         fx!.fillStyle = grad;
         fx!.beginPath();
@@ -440,8 +440,8 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
 
         for (let pass = 0; pass < 2; pass++) {
           const isGlow = pass === 0;
-          const alpha = isGlow ? amp * 0.16 : amp;
-          const lineW = isGlow ? arc.width * 6.5 : arc.width;
+          const alpha = isGlow ? amp * 0.13 : amp * 0.9;
+          const lineW = isGlow ? arc.width * 6 : arc.width;
 
           fx!.strokeStyle = isGlow
             ? rgba(GOLD_R, GOLD_G, GOLD_B, alpha)
@@ -486,9 +486,9 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
           fx!.lineDashOffset = 0;
           fx!.lineCap = "round";
           fx!.strokeStyle = isGlow
-            ? rgba(GOLD_R, GOLD_G, GOLD_B, ease * 0.3)
+            ? rgba(GOLD_R, GOLD_G, GOLD_B, ease * 0.28)
             : rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, ease * 0.95);
-          fx!.lineWidth = isGlow ? 13 : 2.6;
+          fx!.lineWidth = isGlow ? 13 : 2.8;
           roundedRectPath(fx!, px, py, pw, ph, pr);
           fx!.stroke();
         }
@@ -610,7 +610,8 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         />
       </div>
 
-      {/* Burst FX — sibling layer, so the light composites over the cards */}
+      {/* Burst FX — sibling layer above the card grid, additively blended, so
+          the light sweeps across the translucent cards as in the reference */}
       <div
         style={{
           position: "absolute",

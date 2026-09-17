@@ -93,7 +93,9 @@ function DomainCard({
       style={{
         position: "relative",
         overflow: "hidden",
-        background: "var(--surface)",
+        background: "rgba(16, 20, 27, 0.58)",
+        backdropFilter: "blur(7px)",
+        WebkitBackdropFilter: "blur(7px)",
         border: "1px solid rgba(255,255,255,0.06)",
         borderRadius: "14px",
         padding: "28px",
@@ -211,14 +213,16 @@ export default function Tracks() {
   const constellationRef = useRef<ConstellationBgHandle>(null);
 
   const handleCardClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    // Anchor the burst in the open background band just above the card, and
-    // hand over the card's size so the phone wireframe scales to the grid.
+    const card = e.currentTarget;
+    const cardRect = card.getBoundingClientRect();
+    // Fire from the centre of the card grid, at its top edge, so the wireframe
+    // rises into the open space and its lower half is hidden behind the cards.
+    const gridRect = (card.parentElement ?? card).getBoundingClientRect();
     constellationRef.current?.triggerBurst(
-      rect.left + rect.width / 2,
-      rect.top - 32,
-      rect.width,
-      rect.height
+      gridRect.left + gridRect.width / 2,
+      gridRect.top,
+      cardRect.width,
+      cardRect.height
     );
   }, []);
 
