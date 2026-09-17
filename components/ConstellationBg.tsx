@@ -1,348 +1,279 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ConstellationBg — amber plexus particle network background.
-
-   A field of small gold dots connected by thin amber lines, drifting slowly.
-   Occasional pulse flares travel along edges. Respects prefers-reduced-motion
-   and pauses via IntersectionObserver when off-screen.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* --- Tokens (from :root CSS vars, hardcoded for canvas context) --- */
-const GOLD = { r: 217, g: 169, b: 74 };
-const GOLD_BRIGHT = { r: 244, g: 200, b: 98 };
-const INK = "#07090d";
-
-/* --- Configuration --- */
-const LINK_DIST = 160;
-const NODE_COUNT_DESKTOP = 85;
-const NODE_COUNT_MOBILE = 35;
-const BASE_SPEED = 0.15;
-const PULSE_INTERVAL_MIN = 3000;
-const PULSE_INTERVAL_MAX = 7000;
-const PULSE_SPEED = 3.5; // 0..1 per second
-const PULSE_TRAIL_LEN = 0.35;
-
-interface Node {
+type Node = {
   x: number;
   y: number;
   vx: number;
   vy: number;
-  size: number;
-  opacity: number;
-}
+  r: number;      // radius
+  baseAlpha: number;
+  glow: number;   // 0..1, decays each frame, pushed up by bursts
+};
 
-interface Pulse {
-  fromIdx: number;
-  toIdx: number;
-  progress: number; // 0..1
-  intensity: number;
-}
+type Edge = {
+  a: number; // index into nodes
+  b: number;
+  glow: number; // 0..1, decays each frame, pushed up by bursts
+};
 
-function rgba(c: { r: number; g: number; b: number }, a: number) {
-  return `rgba(${c.r},${c.g},${c.b},${a.toFixed(3)})`;
-}
+export type ConstellationBgHandle = {
+  triggerBurst: (clientX: number, clientY: number) => void;
+};
 
-function makeNodes(count: number, w: number, h: number): Node[] {
-  const nodes: Node[] = [];
-  for (let i = 0; i < count; i++) {
-    const speed = BASE_SPEED * (0.3 + Math.random() * 0.7);
-    const angle = Math.random() * Math.PI * 2;
-    nodes.push({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      size: 1.2 + Math.random() * 1.8,
-      opacity: 0.25 + Math.random() * 0.55,
-    });
-  }
-  return nodes;
-}
+const ACCENT = "217, 169, 84"; // #D9A954 as r,g,b for rgba() strings
 
-export default function ConstellationBg() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
+const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const nodesRef = useRef<Node[]>([]);
-  const pulsesRef = useRef<Pulse[]>([]);
-  const pulseTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const runningRef = useRef(false);
+  const edgesRef = useRef<Edge[]>([]);
+  const rafRef = useRef<number | null>(null);
   const reducedMotionRef = useRef(false);
-  const sizeRef = useRef({ w: 0, h: 0 });
+  const inViewRef = useRef(true);
+  const dprRef = useRef(1);
+  const pendingBurstRef = useRef<{ x: number; y: number } | null>(null);
 
-  /* --- Spawn a pulse along a random edge --- */
-  const spawnPulse = useCallback(() => {
-    const nodes = nodesRef.current;
-    if (nodes.length < 2) return;
+  useImperativeHandle(ref, () => ({
+    triggerBurst(clientX: number, clientY: number) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      // convert viewport coords -> canvas-local coords
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      pendingBurstRef.current = { x: localX, y: localY };
+    },
+  }));
 
-    // Pick a random node and find its nearest neighbor
-    const fromIdx = Math.floor(Math.random() * nodes.length);
-    const from = nodes[fromIdx];
-    let bestDist = Infinity;
-    let toIdx = -1;
-
-    for (let j = 0; j < nodes.length; j++) {
-      if (j === fromIdx) continue;
-      const dx = from.x - nodes[j].x;
-      const dy = from.y - nodes[j].y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d < LINK_DIST && d < bestDist) {
-        bestDist = d;
-        toIdx = j;
-      }
-    }
-
-    if (toIdx >= 0) {
-      pulsesRef.current.push({
-        fromIdx,
-        toIdx,
-        progress: 0,
-        intensity: 0.6 + Math.random() * 0.4,
-      });
-    }
-
-    // Schedule next pulse
-    if (!reducedMotionRef.current) {
-      pulseTimerRef.current = setTimeout(
-        spawnPulse,
-        PULSE_INTERVAL_MIN + Math.random() * (PULSE_INTERVAL_MAX - PULSE_INTERVAL_MIN)
-      );
-    }
-  }, []);
-
-  /* --- Main init + animation loop --- */
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reducedMotionRef.current = mql.matches;
+    reducedMotionRef.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
-    const isMobile = window.innerWidth < 768;
-    const count = isMobile ? NODE_COUNT_MOBILE : NODE_COUNT_DESKTOP;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const isMobile = () => window.innerWidth < 640;
 
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const w = parent.clientWidth;
-      const h = parent.clientHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      sizeRef.current = { w, h };
-
-      // Re-init nodes on resize if they haven't been created or count changed dramatically
-      if (nodesRef.current.length === 0) {
-        nodesRef.current = makeNodes(count, w, h);
+    function buildNodes() {
+      const rect = container!.getBoundingClientRect();
+      const count = isMobile() ? 36 : 90;
+      const nodes: Node[] = [];
+      for (let i = 0; i < count; i++) {
+        nodes.push({
+          x: Math.random() * rect.width,
+          y: Math.random() * rect.height,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: (Math.random() - 0.5) * 0.15,
+          r: Math.random() * 1.6 + 0.6,
+          baseAlpha: Math.random() * 0.5 + 0.25,
+          glow: 0,
+        });
       }
-    };
+      nodesRef.current = nodes;
 
-    resize();
-    window.addEventListener("resize", resize, { passive: true });
-
-    /* --- Reduced-motion: render one frame, no loop --- */
-    if (reducedMotionRef.current) {
-      renderFrame(ctx, nodesRef.current, pulsesRef.current, sizeRef.current, 0);
-      return () => {
-        window.removeEventListener("resize", resize);
-      };
+      // build edges: connect each node to its nearest few neighbors within a threshold
+      const edges: Edge[] = [];
+      const threshold = isMobile() ? 90 : 130;
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < threshold) {
+            edges.push({ a: i, b: j, glow: 0 });
+          }
+        }
+      }
+      edgesRef.current = edges;
     }
 
-    /* --- IntersectionObserver: pause when off-screen --- */
+    function resize() {
+      const rect = container!.getBoundingClientRect();
+      dprRef.current = Math.min(window.devicePixelRatio || 1, 2);
+      canvas!.width = rect.width * dprRef.current;
+      canvas!.height = rect.height * dprRef.current;
+      canvas!.style.width = `${rect.width}px`;
+      canvas!.style.height = `${rect.height}px`;
+      ctx!.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0);
+      buildNodes();
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+
     const io = new IntersectionObserver(
-      ([entry]) => {
-        runningRef.current = entry.isIntersecting;
-        if (entry.isIntersecting && !animRef.current) {
-          lastTimeRef.current = 0;
-          animRef.current = requestAnimationFrame(loop);
-        }
+      (entries) => {
+        inViewRef.current = entries[0]?.isIntersecting ?? true;
       },
-      { threshold: 0.02 }
+      { threshold: 0.05 }
     );
-    io.observe(canvas);
+    io.observe(container);
 
-    const lastTimeRef = { current: 0 };
+    function applyBurst() {
+      const burst = pendingBurstRef.current;
+      if (!burst) return;
+      pendingBurstRef.current = null;
 
-    const loop = (time: number) => {
-      if (!runningRef.current) {
-        animRef.current = 0;
-        return;
-      }
-
-      const dt = lastTimeRef.current ? Math.min((time - lastTimeRef.current) / 1000, 0.05) : 0.016;
-      lastTimeRef.current = time;
-
-      const { w, h } = sizeRef.current;
       const nodes = nodesRef.current;
-      const pulses = pulsesRef.current;
+      const edges = edgesRef.current;
 
-      // Move nodes
-      for (const n of nodes) {
-        n.x += n.vx * dt * 60;
-        n.y += n.vy * dt * 60;
-        // Bounce off edges
-        if (n.x < 0 || n.x > w) n.vx *= -1;
-        if (n.y < 0 || n.y > h) n.vy *= -1;
-        n.x = Math.max(0, Math.min(w, n.x));
-        n.y = Math.max(0, Math.min(h, n.y));
-      }
+      // find nodes within a radius of the burst origin, light them + their edges
+      const burstRadius = isMobile() ? 160 : 220;
+      const litNodeIdx = new Set<number>();
+      nodes.forEach((n, idx) => {
+        const dx = n.x - burst.x;
+        const dy = n.y - burst.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < burstRadius) {
+          const falloff = 1 - dist / burstRadius;
+          n.glow = Math.max(n.glow, falloff);
+          litNodeIdx.add(idx);
+        }
+      });
+      edges.forEach((e) => {
+        if (litNodeIdx.has(e.a) || litNodeIdx.has(e.b)) {
+          e.glow = Math.max(e.glow, 0.9);
+        }
+      });
+    }
 
-      // Advance pulses
-      for (let i = pulses.length - 1; i >= 0; i--) {
-        pulses[i].progress += PULSE_SPEED * dt;
-        if (pulses[i].progress > 1 + PULSE_TRAIL_LEN) {
-          pulses.splice(i, 1);
+    function step() {
+      const rect = container!.getBoundingClientRect();
+      const nodes = nodesRef.current;
+      const edges = edgesRef.current;
+
+      ctx!.clearRect(0, 0, rect.width, rect.height);
+
+      if (!reducedMotionRef.current && inViewRef.current) {
+        // drift
+        nodes.forEach((n) => {
+          n.x += n.vx;
+          n.y += n.vy;
+          if (n.x < 0 || n.x > rect.width) n.vx *= -1;
+          if (n.y < 0 || n.y > rect.height) n.vy *= -1;
+          n.x = Math.max(0, Math.min(rect.width, n.x));
+          n.y = Math.max(0, Math.min(rect.height, n.y));
+          n.glow *= 0.965; // decay
+        });
+        edges.forEach((e) => {
+          e.glow *= 0.94; // decay a bit faster than nodes
+        });
+
+        applyBurst();
+
+        // occasional ambient pulse even with no click, matching the reference's idle behavior
+        if (Math.random() < 0.01 && edges.length) {
+          const e = edges[Math.floor(Math.random() * edges.length)];
+          e.glow = Math.max(e.glow, 0.6);
         }
       }
 
-      renderFrame(ctx, nodes, pulses, sizeRef.current, time);
-      animRef.current = requestAnimationFrame(loop);
-    };
+      // draw edges
+      edges.forEach((e) => {
+        const na = nodes[e.a];
+        const nb = nodes[e.b];
+        if (!na || !nb) return;
+        const dx = na.x - nb.x;
+        const dy = na.y - nb.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const threshold = isMobile() ? 90 : 130;
+        const baseOpacity = Math.max(0, 0.22 * (1 - dist / threshold));
+        const opacity = Math.min(1, baseOpacity + e.glow * 0.8);
+        if (opacity <= 0.003) return;
+        ctx!.strokeStyle = `rgba(${ACCENT}, ${opacity})`;
+        ctx!.lineWidth = 1;
+        ctx!.beginPath();
+        ctx!.moveTo(na.x, na.y);
+        ctx!.lineTo(nb.x, nb.y);
+        ctx!.stroke();
+      });
 
-    // Kick off
-    animRef.current = requestAnimationFrame(loop);
+      // draw nodes
+      nodes.forEach((n) => {
+        const alpha = Math.min(1, n.baseAlpha + n.glow * 0.9);
+        const radius = n.r + n.glow * 1.8;
+        ctx!.beginPath();
+        ctx!.fillStyle = `rgba(${ACCENT}, ${alpha})`;
+        ctx!.arc(n.x, n.y, radius, 0, Math.PI * 2);
+        ctx!.fill();
 
-    // Start pulse timer
-    pulseTimerRef.current = setTimeout(
-      spawnPulse,
-      1500 + Math.random() * 2000
-    );
-
-    // Listen for reduced-motion changes
-    const onMotionChange = (e: MediaQueryListEvent) => {
-      reducedMotionRef.current = e.matches;
-      if (e.matches) {
-        if (animRef.current) {
-          cancelAnimationFrame(animRef.current);
-          animRef.current = 0;
+        if (n.glow > 0.05) {
+          // soft glow halo for lit nodes
+          const grad = ctx!.createRadialGradient(
+            n.x,
+            n.y,
+            0,
+            n.x,
+            n.y,
+            radius * 5
+          );
+          grad.addColorStop(0, `rgba(${ACCENT}, ${n.glow * 0.35})`);
+          grad.addColorStop(1, `rgba(${ACCENT}, 0)`);
+          ctx!.beginPath();
+          ctx!.fillStyle = grad;
+          ctx!.arc(n.x, n.y, radius * 5, 0, Math.PI * 2);
+          ctx!.fill();
         }
-        if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
-        renderFrame(ctx, nodesRef.current, pulsesRef.current, sizeRef.current, 0);
-      }
-    };
-    mql.addEventListener("change", onMotionChange);
+      });
+
+      rafRef.current = requestAnimationFrame(step);
+    }
+
+    if (reducedMotionRef.current) {
+      // static single frame, no RAF loop, burst is skipped entirely
+      const rect = container.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      edgesRef.current.forEach((e) => {
+        const na = nodesRef.current[e.a];
+        const nb = nodesRef.current[e.b];
+        ctx!.strokeStyle = `rgba(${ACCENT}, 0.15)`;
+        ctx!.lineWidth = 1;
+        ctx!.beginPath();
+        ctx!.moveTo(na.x, na.y);
+        ctx!.lineTo(nb.x, nb.y);
+        ctx!.stroke();
+      });
+      nodesRef.current.forEach((n) => {
+        ctx!.beginPath();
+        ctx!.fillStyle = `rgba(${ACCENT}, ${n.baseAlpha})`;
+        ctx!.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx!.fill();
+      });
+    } else {
+      rafRef.current = requestAnimationFrame(step);
+    }
 
     return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      animRef.current = 0;
-      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
-      io.disconnect();
       window.removeEventListener("resize", resize);
-      mql.removeEventListener("change", onMotionChange);
+      io.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [spawnPulse]);
+  }, []);
 
   return (
     <div
-      className="absolute inset-0 pointer-events-none overflow-hidden"
-      style={{ zIndex: 0 }}
+      ref={containerRef}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+      aria-hidden="true"
     >
-      <canvas
-        ref={canvasRef}
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full"
-        style={{ opacity: 0.85 }}
-      />
+      <canvas ref={canvasRef} />
     </div>
   );
-}
+});
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Render one frame
-   ───────────────────────────────────────────────────────────────────────── */
-function renderFrame(
-  ctx: CanvasRenderingContext2D,
-  nodes: Node[],
-  pulses: Pulse[],
-  size: { w: number; h: number },
-  _time: number
-) {
-  const { w, h } = size;
-  ctx.clearRect(0, 0, w, h);
+ConstellationBg.displayName = "ConstellationBg";
 
-  const linkDistSq = LINK_DIST * LINK_DIST;
-
-  // Build a set of pulsing edges for glow lookup
-  const pulseEdges = new Map<string, number>(); // "fromIdx-toIdx" -> glow intensity
-  for (const p of pulses) {
-    const glow = Math.max(0, p.intensity * (1 - Math.abs(p.progress - 0.5) * 2));
-    const key1 = `${p.fromIdx}-${p.toIdx}`;
-    const key2 = `${p.toIdx}-${p.fromIdx}`;
-    pulseEdges.set(key1, Math.max(pulseEdges.get(key1) || 0, glow));
-    pulseEdges.set(key2, Math.max(pulseEdges.get(key2) || 0, glow));
-  }
-
-  // Draw links
-  for (let i = 0; i < nodes.length; i++) {
-    const a = nodes[i];
-    for (let j = i + 1; j < nodes.length; j++) {
-      const b = nodes[j];
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      const distSq = dx * dx + dy * dy;
-      if (distSq > linkDistSq) continue;
-
-      const dist = Math.sqrt(distSq);
-      const baseAlpha = (1 - dist / LINK_DIST) * 0.12;
-
-      // Check if this edge has a pulse
-      const key = `${i}-${j}`;
-      const pulseGlow = pulseEdges.get(key) || 0;
-      const alpha = baseAlpha + pulseGlow * 0.45;
-
-      const color = pulseGlow > 0.1 ? GOLD_BRIGHT : GOLD;
-
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = rgba(color, alpha);
-      ctx.lineWidth = pulseGlow > 0.3 ? 1.5 : 0.7;
-      ctx.stroke();
-    }
-  }
-
-  // Draw nodes
-  for (const n of nodes) {
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(GOLD, n.opacity);
-    ctx.fill();
-
-    // Glow halo for brighter nodes
-    if (n.opacity > 0.5) {
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.size * 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = rgba(GOLD, 0.05);
-      ctx.fill();
-    }
-  }
-
-  // Draw pulse bloom dots
-  for (const p of pulses) {
-    if (p.progress < 0 || p.progress > 1) continue;
-    const a = nodes[p.fromIdx];
-    const b = nodes[p.toIdx];
-    if (!a || !b) continue;
-
-    const px = a.x + (b.x - a.x) * p.progress;
-    const py = a.y + (b.y - a.y) * p.progress;
-    const glowSize = 4 + p.intensity * 3;
-
-    ctx.beginPath();
-    ctx.arc(px, py, glowSize, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(GOLD_BRIGHT, 0.35 * p.intensity);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(px, py, glowSize * 0.4, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(GOLD_BRIGHT, 0.7 * p.intensity);
-    ctx.fill();
-  }
-}
+export default ConstellationBg;

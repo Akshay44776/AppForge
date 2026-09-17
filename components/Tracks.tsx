@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Countdown from "./Countdown";
-import ConstellationBg from "./ConstellationBg";
+import ConstellationBg, { ConstellationBgHandle } from "./ConstellationBg";
 import PhoneMockupLoop from "./domains/PhoneMockupLoop";
 import HoverPhoneReveal from "./domains/HoverPhoneReveal";
 import { EVENT_DATE } from "@/lib/site";
@@ -56,6 +56,7 @@ function DomainCard({
   isHovered,
   onHover,
   onBlur,
+  onClick,
   cardRef,
 }: {
   domain: (typeof DOMAINS)[number];
@@ -63,6 +64,7 @@ function DomainCard({
   isHovered: boolean;
   onHover: () => void;
   onBlur: () => void;
+  onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   cardRef: (el: HTMLDivElement | null) => void;
 }) {
   const [phase, setPhase] = useState<"locked" | "unsealing" | "open">("locked");
@@ -83,6 +85,7 @@ function DomainCard({
       className={`domain-card panel-${phase}`}
       onMouseEnter={onHover}
       onMouseLeave={onBlur}
+      onClick={onClick}
       onFocus={onHover}
       onBlur={onBlur}
       tabIndex={0}
@@ -206,6 +209,15 @@ export default function Tracks() {
   const cardRefsArray = useRef<(HTMLDivElement | null)[]>([null, null, null]);
   const cardRefs = useRef(cardRefsArray.current);
   const containerRef = useRef<HTMLDivElement>(null);
+  const constellationRef = useRef<ConstellationBgHandle>(null);
+
+  const handleCardClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    constellationRef.current?.triggerBurst(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2
+    );
+  }, []);
 
   // Keep cardRefs.current in sync
   useEffect(() => {
@@ -222,7 +234,7 @@ export default function Tracks() {
   return (
     <section id="tracks" className="relative section-pad overflow-hidden">
       {/* Background: constellation particle network */}
-      <ConstellationBg />
+      <ConstellationBg ref={constellationRef} />
 
       <div ref={containerRef} className="wrap relative z-10">
         {/* Eyebrow */}
@@ -262,6 +274,7 @@ export default function Tracks() {
               isHovered={activeCard === i}
               onHover={() => setActiveCard(i)}
               onBlur={() => setActiveCard(null)}
+              onClick={handleCardClick}
               cardRef={setCardRef(i)}
             />
           ))}
