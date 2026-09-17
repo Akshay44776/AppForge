@@ -6,7 +6,7 @@ export default function Footer() {
           SMALL STEPS / BIG SOLUTIONS / A SMARTER TOMORROW
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted">
-          <p>AppForge · SJB Institute of Technology · Dept. of CSE</p>
+          <p>Dept. of CSE · SJB Institute of Technology · AppForge </p>
           <a href="mailto:appforge.cse@gmail.com" className="hover:text-gold transition-colors">
             appforge.cse@gmail.com
           </a>

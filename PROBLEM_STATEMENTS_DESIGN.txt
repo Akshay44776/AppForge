@@ -1,0 +1,400 @@
+================================================================================
+    APPFORGE — DETAILED DESIGN SPECIFICATION: PROBLEM STATEMENTS SECTION
+================================================================================
+Document: Technical & Visual Design Analysis of the "Three Problem Statements" Section
+File Created For: Project Documentation
+Date: 2026-09-16
+Target Directory: c:\Users\Kiran\OneDrive\Desktop\SJB\SJB
+Key Files Involved:
+  - components/Tracks.tsx (Main Section Layout & Dossier State Machine)
+  - components/Countdown.tsx (Live Synchronized Unlock Countdown Timer)
+  - components/BlueprintBackground.tsx (HTML5 Ambient Wireframe App Simulation)
+  - app/globals.css (Scanline Keyframes, Unlock Transitions & CSS Variables)
+  - lib/site.ts (Global Event Target Timestamp: EVENT_DATE)
+  - tailwind.config.ts (Color Tokens, Typography & Grid Utilities)
+================================================================================
+
+
+1. EXECUTIVE OVERVIEW & CONCEPTUAL PURPOSE
+--------------------------------------------------------------------------------
+The "Three Problem Statements" section (rendered by <Tracks /> at #tracks) forms
+the mystery and competitive foundation of the AppForge hackathon.
+
+In most hackathons, challenge themes are announced weeks ahead, enabling teams to
+pre-build or template solutions. AppForge enforces absolute secrecy: the three
+problem statements remain strictly classified until the exact launch second.
+
+The section is designed to:
+  1. Establish Competitive Secrecy: Visually convey the idea of classified,
+     tamper-proof dossiers ("Kept under wraps", "Sealed until launch").
+  2. Build Urgency via Live Countdown: Real-time ticker counting down days, hours,
+     and minutes until the statements unlock.
+  3. Set Clear Ground Rules: Communicate baseline judging expectations (a working
+     core build + one differentiating original feature).
+  4. Ambient Digital Craft: Reinforce the hacker/engineering aesthetic through
+     glitching mobile wireframe blueprints drifting through the background.
+  5. Built-in Unsealing Lifecycle: Built with dynamic states (locked -> unsealing
+     -> open) ready to smoothly unveil problem briefs when the timer strikes zero.
+
+
+2. ARCHITECTURAL HIERARCHY & COMPONENT COMPOSITION
+--------------------------------------------------------------------------------
+The section is organized into three distinct visual and functional layers:
+
+[ Layer 0: Background Canvas Simulation ] --> BlueprintBackground.tsx
+     |-- HTML5 Canvas covering 100% of the section bounds.
+     |-- Procedural mobile phone wireframe layouts drawing line-by-line.
+     |-- 4-phase lifecycle: Draw (with cursor tracer) -> Hold (voltage flicker)
+         -> Glitch (horizontal jitter & dropouts) -> Fade (dissolve & reseed).
+     |-- Low-opacity gold ink (rgba(217, 169, 74, 0.18)) with 0% scroll friction.
+
+[ Layer 1: Context Header & Live Countdown ] --> Tracks.tsx & Countdown.tsx
+     |-- Section Kicker: "Kept under wraps" in amber gold tracking.
+     |-- Section Title: "Three problem statements" in Space Grotesk.
+     |-- Explanatory Narrative: 65ch width constraint for reading comfort.
+     |-- Countdown Ticker: Synchronized to EVENT_DATE with tabular numeric digits.
+
+[ Layer 2: Sealed Dossier Grid ] --> Tracks.tsx (<Dossier /> subcomponent)
+     |-- 3-column responsive grid (md:grid-cols-3 gap-4).
+     |-- Top Monospace Index: "PS · 01", "PS · 02", "PS · 03".
+     |-- Ambient Scanning Line: Continuous vertical cyan/gold laser sweep (.scanline).
+     |-- High-Contrast Padlock Icon: Amber SVG stroke with rounded shackle.
+     |-- Status Label: Tracked all-caps "SEALED UNTIL LAUNCH".
+     |-- Surface Texture: Subtle noise overlay (/textures/sealed-panel.png).
+
+[ Layer 3: Baseline Criteria List ] --> Tracks.tsx
+     |-- Core deliverable expectations: Functional baseline + signature feature.
+
+
+3. VISUAL DESIGN SYSTEM & COLOR PALETTE
+--------------------------------------------------------------------------------
+The section adheres strictly to the AppForge brand tokens:
+
+  - Deep Ink Canvas (--ink: #07090d):
+    Pitch-black high-contrast background creating an immersive cyber atmosphere.
+
+  - Surface Container (--surface: #10141b):
+    Dossier card background color, maintaining subtle contrast above the ink base.
+
+  - Fine Wireframe Line (--line: rgba(236, 232, 222, 0.10)):
+    Ultra-subtle 1px borders around dossiers and dividers.
+
+  - Gold Accents (--gold: #d9a94a, --gold-bright: #f4c862):
+    Used for kicker headers, lock icons, countdown colons, and status text.
+
+  - Paper White (--paper: #ece8de):
+    Clean, warm off-white used for primary headings and countdown digits.
+
+  - Muted Slate (--muted: #828a97):
+    Neutral secondary typography for subtitles, card numbers, and unit labels.
+
+
+4. COMPONENT BREAKDOWN & DETAILED LOGIC
+--------------------------------------------------------------------------------
+
+A. Main Container & Header (Tracks.tsx)
+   - ID: #tracks (anchored to navigation links).
+   - Padding: Responsive padding utility .section-pad (clamp(4rem, 10vw, 8rem)).
+   - Max-Width Wrapper: .wrap (w-full max-w-6xl px-5 sm:px-8).
+   - Dynamic Layout:
+     * Header & Narrative
+     * Countdown strip
+     * 3-column Dossier grid
+     * Expectations bullet list
+
+B. Live Countdown Engine (Countdown.tsx)
+   - Props:
+     * `to`: Target ISO 8601 date string (EVENT_DATE = "2026-10-30T09:00:00+05:30").
+     * `withSeconds`: Optional boolean toggle (default false for clean header aesthetic).
+   - Mechanics:
+     * 1000ms tick interval updating state via Date.now().
+     * Computes remaining milliseconds clamped to 0 (`Math.max(0, target - now)`).
+     * Calculates days (86,400,000ms), hours (3,600,000ms), minutes (60,000ms).
+     * Uses `tabular-nums` and `padStart(2, "0")` to prevent horizontal layout jiggle.
+     * `suppressHydrationWarning` avoids SSR/client clock divergence mismatch.
+
+C. Dossier Cards & State Machine (Tracks.tsx -> Dossier)
+   - Supports 3 autonomous phases:
+     1. "locked": Default pre-event state.
+        * Shows padlock icon + "SEALED UNTIL LAUNCH".
+        * Continuous scanline laser animation runs at 4s cycle.
+        * Hidden open-content (`opacity: 0`).
+     2. "unsealing": Triggered when `sealed` prop changes to false.
+        * Scanline frequency accelerates drastically from 4s to 0.55s.
+        * Locked contents trigger `unlockfade` animation (0.6s fade-out).
+        * Automatic 900ms timer transitions phase to "open".
+     3. "open": Unveiled post-launch state.
+        * Locked content completely unmounted (`display: none`).
+        * Open content (title, brief description) animates in with `revealin`
+          (0.7s ease with 0.35s stagger).
+
+D. Background Wireframe Canvas (BlueprintBackground.tsx)
+   - Concept: "App wireframe assembling line-by-line, then glitching away".
+   - Mechanics:
+     * Renders 3 floating mobile device outlines on desktop (1 on mobile).
+     * 3 Distinct App Archetypes:
+       - Layout A: Navigation bar, two content cards, call-to-action button, tab bar.
+       - Layout B: Search bar, filter pill, search icon, 5 list rows with avatars.
+       - Layout C: Analytics dashboard, stat cards, line chart with sparkline points.
+     * Procedural Animation Cycle:
+       1. Draw Phase (3-5s): Lines trace out progressively from start to end; an
+          illuminated gold cursor dot with radial halo leads the drawing point.
+       2. Hold Phase (1-2s): Fully assembled app displays subtle sine-wave voltage flicker.
+       3. Glitch Phase (1.5-2.5s): Random horizontal pixel displacement per line,
+          simulating a corrupted feed or signal interference.
+       4. Fade Phase (1-1.5s): Soft alpha dissolve to 0, resets layout index, and respawns.
+     * Performance:
+       - Uses IntersectionObserver to pause requestAnimationFrame when out of viewport.
+       - Retina display DPR clamping to 2x for battery and GPU efficiency.
+
+
+5. CSS SCANLINE & TRANSITION SPECIFICATIONS (app/globals.css)
+--------------------------------------------------------------------------------
+Key CSS rules driving the dossier atmosphere:
+
+  /* Continuous scanning laser bar */
+  @keyframes scan {
+    0%   { top: -8%; }
+    100% { top: 108%; }
+  }
+  .scanline {
+    position: absolute; left: 0; right: 0; height: 2px; top: -8%;
+    background: linear-gradient(90deg, transparent, rgba(217, 169, 74, 0.55), transparent);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+  }
+  .panel-unsealing .scanline { animation-duration: 0.55s; }
+
+  /* Fade out padlock content upon unsealing */
+  @keyframes unlockfade {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+  .panel-unsealing .locked-content { animation: unlockfade 0.6s ease forwards; }
+  .panel-open .locked-content      { display: none; }
+
+  /* Reveal statement content smoothly upwards */
+  @keyframes revealin {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .panel-open .open-content { animation: revealin 0.7s ease 0.35s both; }
+  .panel-locked .open-content, .panel-unsealing .open-content { opacity: 0; }
+
+
+6. COMPLETE COPY-PASTEABLE PRODUCTION SOURCE CODE
+--------------------------------------------------------------------------------
+
+================================================================================
+FILE 1: components/Tracks.tsx
+================================================================================
+"use client";
+
+import { useEffect, useState } from "react";
+import Countdown from "./Countdown";
+import BlueprintBackground from "./BlueprintBackground";
+import { EVENT_DATE } from "@/lib/site";
+
+function Dossier({
+  index,
+  sealed = true,
+  title = "",
+  body = "",
+}: {
+  index: number;
+  sealed?: boolean;
+  title?: string;
+  body?: string;
+}) {
+  const [phase, setPhase] = useState<"locked" | "unsealing" | "open">("locked");
+
+  useEffect(() => {
+    if (!sealed && phase === "locked") {
+      setPhase("unsealing");
+      const t = setTimeout(() => setPhase("open"), 900);
+      return () => clearTimeout(t);
+    }
+    if (sealed && phase !== "locked") setPhase("locked");
+  }, [sealed]);
+
+  return (
+    <div
+      className={`relative overflow-hidden border border-line bg-surface min-h-[22rem] flex flex-col p-6 panel-${phase}`}
+    >
+      <div
+        className="absolute inset-0 opacity-25 pointer-events-none"
+        style={{
+          backgroundImage: "url(/textures/sealed-panel.png)",
+          backgroundSize: "cover",
+        }}
+        aria-hidden
+      />
+      <div className="scanline" aria-hidden />
+      <p className="relative font-display text-sm tracking-widest text-muted">
+        PS · 0{index}
+      </p>
+
+      <div className="locked-content relative flex-1 flex flex-col items-center justify-center gap-3 text-center mt-4">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9a94a" strokeWidth="1.5" aria-hidden>
+          <rect x="4" y="10" width="16" height="10" rx="1.5" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+        <p className="text-sm tracking-widest uppercase text-gold">Sealed until launch</p>
+      </div>
+
+      <div className="open-content relative flex-1 mt-4">
+        <h3 className="font-display text-xl text-paper">{title}</h3>
+        <p className="mt-3 text-sm text-muted leading-relaxed">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function Tracks() {
+  return (
+    <section id="tracks" className="relative section-pad overflow-hidden">
+      <BlueprintBackground />
+      <div className="wrap relative z-10">
+        <p className="kicker mb-3">Kept under wraps</p>
+        <h2 className="font-display text-3xl sm:text-5xl leading-tight">Three problem statements</h2>
+        <p className="mt-5 text-muted leading-relaxed" style={{ maxWidth: "65ch" }}>
+          Three original problem statements, revealed together at the start of the challenge —
+          not a moment before. Each comes with a set of general expectations to build against.
+          What you add on top of that is entirely up to you.
+        </p>
+
+        <div className="mt-10 flex flex-wrap items-center gap-6">
+          <p className="text-sm text-muted">Statements unlock in</p>
+          <Countdown to={EVENT_DATE} />
+        </div>
+
+        <div className="mt-8 grid md:grid-cols-3 gap-4">
+          <Dossier index={1} />
+          <Dossier index={2} />
+          <Dossier index={3} />
+        </div>
+
+        <ul className="mt-10 space-y-2 text-sm text-muted" style={{ maxWidth: "70ch" }}>
+          <li>• A working core build that meets the general expectations announced at the start of the challenge.</li>
+          <li>• One original feature or approach that&apos;s entirely your own — this is what sets your build apart from everyone else on the same statement.</li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+
+================================================================================
+FILE 2: components/Countdown.tsx
+================================================================================
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function Countdown({
+  to,
+  withSeconds = false,
+  className = "",
+}: {
+  to: string;
+  withSeconds?: boolean;
+  className?: string;
+}) {
+  const target = new Date(to).getTime();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const diff = Math.max(0, target - now);
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+
+  const cell = (v: number, label: string) => (
+    <div className="flex flex-col items-center">
+      <span className="font-display text-2xl sm:text-3xl text-paper tabular-nums" suppressHydrationWarning>
+        {String(v).padStart(2, "0")}
+      </span>
+      <span className="text-[11px] uppercase tracking-widest text-muted">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className={`flex items-start gap-5 sm:gap-7 ${className}`} role="timer" aria-live="off">
+      {cell(d, "days")}
+      <span className="font-display text-2xl text-gold" aria-hidden>:</span>
+      {cell(h, "hours")}
+      <span className="font-display text-2xl text-gold" aria-hidden>:</span>
+      {cell(m, "min")}
+      {withSeconds && (
+        <>
+          <span className="font-display text-2xl text-gold" aria-hidden>:</span>
+          {cell(s, "sec")}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+================================================================================
+FILE 3: lib/site.ts (Relevant Constants)
+================================================================================
+export const EVENT_DATE = "2026-10-30T09:00:00+05:30";
+export const REGISTRATION_URL = "https://docs.google.com/forms/...";
+export const TECHFEST_URL = process.env.NEXT_PUBLIC_TECHFEST_URL ?? "#";
+
+
+================================================================================
+FILE 4: app/globals.css (Relevant Animation & Theme Styles)
+================================================================================
+:root {
+  --ink: #07090d;
+  --surface: #10141b;
+  --surface-2: #171c24;
+  --line: rgba(236, 232, 222, 0.10);
+  --gold: #d9a94a;
+  --gold-bright: #f4c862;
+  --paper: #ece8de;
+  --muted: #828a97;
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-6xl px-5 sm:px-8; }
+  .kicker { @apply font-display text-sm tracking-wide text-gold; }
+  .section-pad { padding-block: clamp(4rem, 10vw, 8rem); }
+}
+
+/* Scanline laser animation */
+@keyframes scan {
+  0%   { top: -8%; }
+  100% { top: 108%; }
+}
+.scanline {
+  position: absolute; left: 0; right: 0; height: 2px; top: -8%;
+  background: linear-gradient(90deg, transparent, rgba(217, 169, 74, 0.55), transparent);
+  animation: scan 4s linear infinite;
+  pointer-events: none;
+}
+.panel-unsealing .scanline { animation-duration: 0.55s; }
+
+/* Locked content fade */
+@keyframes unlockfade {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.panel-unsealing .locked-content { animation: unlockfade 0.6s ease forwards; }
+.panel-open .locked-content      { display: none; }
+
+/* Open content reveal */
+@keyframes revealin {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.panel-open .open-content { animation: revealin 0.7s ease 0.35s both; }
+.panel-locked .open-content, .panel-unsealing .open-content { opacity: 0; }
+================================================================================

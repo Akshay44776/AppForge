@@ -1,7 +1,7 @@
 import SimulationBackground from "./SimulationBackground";
 
 const STATS = [
-  ["₹50,000", "Prize pool"],
+  ["₹45,000", "Prize pool"],
   ["1 day", "Format"],
   ["2–4", "Team size"],
   ["₹400", "Entry fee per team"],
@@ -14,13 +14,10 @@ export default function Prizes() {
       <div className="wrap relative z-10">
         <p className="kicker mb-3">Prizes</p>
         <h2 className="font-display text-3xl sm:text-5xl leading-tight">Win big at AppForge</h2>
-        <p className="mt-8 font-display text-6xl sm:text-8xl text-gold">₹50,000</p>
+        <p className="mt-8 font-display text-6xl sm:text-8xl text-gold">₹45,000</p>
         <p className="mt-3 text-muted">Awarded across winning teams at the closing ceremony.</p>
         <p className="mt-6 text-xs text-muted max-w-2xl leading-relaxed">
-          Rewards are structured based on the final number of registered teams. If the number
-          of participating teams is lower than expected, the reward structure will be tailored
-          accordingly by the organizing committee, while the total prize pool value remains
-          the benchmark.
+          Rewards are structured based on the final number of registered teams. If the number of participating teams is below the required threshold, the reward structure will be tailored accordingly by the organizing committee. The organizing committee's decision is final.
         </p>
 
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 border-t border-line">
