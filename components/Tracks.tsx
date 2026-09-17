@@ -211,16 +211,14 @@ export default function Tracks() {
   const cardRefs = useRef(cardRefsArray.current);
   const containerRef = useRef<HTMLDivElement>(null);
   const constellationRef = useRef<ConstellationBgHandle>(null);
-
   const handleCardClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = e.currentTarget;
     const cardRect = card.getBoundingClientRect();
-    // Fire from the centre of the card grid, at its top edge, so the wireframe
-    // rises into the open space and its lower half is hidden behind the cards.
+    // Fire perfectly from the center of the grid (which aligns exactly over the middle "Track 2" card)
     const gridRect = (card.parentElement ?? card).getBoundingClientRect();
     constellationRef.current?.triggerBurst(
       gridRect.left + gridRect.width / 2,
-      gridRect.top,
+      gridRect.top + gridRect.height / 2,
       cardRect.width,
       cardRect.height
     );
