@@ -235,9 +235,9 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         const midY = (burst.y + endY) / 2 + Math.sin(perpAngle) * perpDist * 0.7;
 
         newArcs.push({
-          ox: burst.x, oy: burst.y,
+          ox: endX, oy: endY,
           cx: midX, cy: midY,
-          ex: endX, ey: endY,
+          ex: burst.x, ey: burst.y,
           progress: 0,
           speed: 0.55 + Math.random() * 0.75,
           intensity: 0.65 + Math.random() * 0.25,
@@ -428,6 +428,25 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         fx!.beginPath();
         fx!.arc(flash.x, flash.y, r, 0, Math.PI * 2);
         fx!.fill();
+
+        /* Lock symbol in the center */
+        fx!.save();
+        fx!.translate(flash.x, flash.y);
+        const lockScale = 2.5 + (1 - ease) * 0.5; // slight scale up as it fades
+        fx!.scale(lockScale, lockScale);
+        fx!.translate(-12, -12);
+        
+        fx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, ease);
+        fx!.lineWidth = 1.5;
+        fx!.lineCap = "round";
+        fx!.lineJoin = "round";
+        fx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, ease);
+        fx!.shadowBlur = 8;
+        
+        const lockPath = new Path2D("M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z");
+        fx!.stroke(lockPath);
+        
+        fx!.restore();
       }
 
       /* 2. Sweeping light ribbons */
