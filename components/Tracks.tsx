@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Countdown from "./Countdown";
 import ConstellationBg, { ConstellationBgHandle } from "./ConstellationBg";
 import PhoneMockupLoop from "./domains/PhoneMockupLoop";
-import HoverPhoneReveal from "./domains/HoverPhoneReveal";
 import { EVENT_DATE } from "@/lib/site";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -280,12 +279,7 @@ export default function Tracks() {
           ))}
         </div>
 
-        {/* Hover phone reveal — single shared instance */}
-        <HoverPhoneReveal
-          activeCard={activeCard}
-          cardRefs={cardRefs}
-          containerRef={containerRef}
-        />
+        {/* Hover phone reveal was removed */}
 
         {/* Expectation bullets */}
         <ul
