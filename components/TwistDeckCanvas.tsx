@@ -169,8 +169,11 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
   const showFrontRef = useRef(false);
   const lockAlphaRef = useRef(0);
 
-  // Rail node positions (will be set from DOM measurement)
+  // Rail node positions and DOM measurements
   const railNodesRef = useRef<Array<{ x: number; y: number; label: string }>>([]);
+  const cardPosRef = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const nodePosRef = useRef({ x: 0, y: 0 });
+  const timelineBottomRef = useRef(0);
 
   const pendingRevealRef = useRef(false);
 
@@ -241,14 +244,14 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
     function buildRings() {
       const rings: OrbitRing[] = [];
       for (let i = 0; i < RING_COUNT; i++) {
-        const baseR = 0.22 + i * 0.06;
+        const baseR = 0.20 + i * 0.05;
         rings.push({
-          rx: baseR + Math.random() * 0.03,
-          ry: (baseR + Math.random() * 0.03) * 0.35, // elliptical — flattened
-          tilt: (Math.random() - 0.5) * 16, // ±8 degrees
+          rx: baseR + Math.random() * 0.02,
+          ry: (baseR + Math.random() * 0.02) * 0.22, // flattened elliptical orbit so it stays cleanly below the timeline
+          tilt: (Math.random() - 0.5) * 12, // ±6 degrees
           phase: Math.random() * 360,
           speed: (8 + Math.random() * 6) * (i % 2 === 0 ? -1 : 1),
-          alpha: 0.25 + Math.random() * 0.35,
+          alpha: 0.22 + Math.random() * 0.28,
         });
       }
       ringsRef.current = rings;
@@ -288,6 +291,55 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       ribbonsRef.current = ribbons;
     }
 
+    /* ─── Measure DOM elements ─────────────────────────────────────── */
+    function updateLayout() {
+      if (!container) return;
+      const contRect = container.getBoundingClientRect();
+      const w = contRect.width;
+      const h = contRect.height;
+      if (w === 0 || h === 0) return;
+
+      const cardAnchor = document.getElementById("twist-card-anchor");
+      if (cardAnchor) {
+        const r = cardAnchor.getBoundingClientRect();
+        cardPosRef.current = {
+          x: r.left + r.width / 2 - contRect.left,
+          y: r.top + r.height / 2 - contRect.top,
+          w: r.width,
+          h: r.height,
+        };
+      } else {
+        cardPosRef.current = {
+          x: w / 2,
+          y: h * 0.67,
+          w: Math.min(208, w * 0.22),
+          h: Math.min(288, h * 0.36),
+        };
+      }
+
+      const hr3Node = document.getElementById("twist-node-hr3");
+      if (hr3Node) {
+        const r = hr3Node.getBoundingClientRect();
+        nodePosRef.current = {
+          x: r.left + r.width / 2 - contRect.left,
+          y: r.top + r.height / 2 - contRect.top,
+        };
+      } else {
+        nodePosRef.current = {
+          x: w / 2,
+          y: h * 0.42,
+        };
+      }
+
+      const timelineEl = document.getElementById("twist-timeline-desktop");
+      if (timelineEl) {
+        const r = timelineEl.getBoundingClientRect();
+        timelineBottomRef.current = r.bottom - contRect.top;
+      } else {
+        timelineBottomRef.current = h * 0.45;
+      }
+    }
+
     /* ─── Resize ───────────────────────────────────────────────────── */
     function resize() {
       const rect = container!.getBoundingClientRect();
@@ -300,10 +352,12 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       canvas!.style.height = `${h}px`;
       ctx!.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0);
       sizeRef.current = { w, h };
+      updateLayout();
     }
 
     /* ─── Init ─────────────────────────────────────────────────────── */
     resize();
+    updateLayout();
     const { w, h } = sizeRef.current;
     buildStars(w, h);
     buildRings();
@@ -320,7 +374,10 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
     window.addEventListener("mousemove", onMouseMove, { passive: true });
 
     const io = new IntersectionObserver(
-      (entries) => { inViewRef.current = entries[0]?.isIntersecting ?? true; },
+      (entries) => {
+        inViewRef.current = entries[0]?.isIntersecting ?? true;
+        if (inViewRef.current) updateLayout();
+      },
       { threshold: 0.05 }
     );
     io.observe(container);
@@ -329,8 +386,8 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
     function ringPoint(ring: OrbitRing, angleDeg: number, cx: number, cy: number, scale: number) {
       const a = (angleDeg + ring.phase) * Math.PI / 180;
       const tiltRad = ring.tilt * Math.PI / 180;
-      const rx = ring.rx * cx * 2 * scale;
-      const ry = ring.ry * cy * 2 * scale;
+      const rx = ring.rx * sizeRef.current.w * scale;
+      const ry = ring.ry * sizeRef.current.h * 0.85 * scale;
       const x0 = Math.cos(a) * rx;
       const y0 = Math.sin(a) * ry;
       // Apply tilt rotation around X axis (foreshortening)
@@ -431,8 +488,17 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
        ═════════════════════════════════════════════════════════════════ */
     function render(dt: number) {
       const { w, h } = sizeRef.current;
-      const cx = w / 2;
-      const cy = h * 0.58; // center orbits around the 3-card block area
+      if (cardPosRef.current.w === 0) {
+        updateLayout();
+      }
+      const cardPos = cardPosRef.current;
+      const cx = cardPos.w > 0 ? cardPos.x : w / 2;
+      const timelineBottom = timelineBottomRef.current || (h * 0.45);
+      // Simulation effect center: explicitly moved downwards so the orbit rings stay below the timeline
+      const orbitCY = cardPos.h > 0
+        ? Math.max(cardPos.y + 25, timelineBottom + 115)
+        : Math.max(h * 0.68, timelineBottom + 115);
+
       const state = stateRef.current;
       const rings = ringsRef.current;
       const dust = dustRef.current;
@@ -446,7 +512,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       ctx!.clearRect(0, 0, w, h);
 
       // ── Vignette background ──
-      const vignette = ctx!.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.7);
+      const vignette = ctx!.createRadialGradient(cx, orbitCY, 0, cx, orbitCY, Math.max(w, h) * 0.7);
       vignette.addColorStop(0, "rgba(7,9,13,0)");
       vignette.addColorStop(1, "rgba(3,2,5,0.6)");
       ctx!.fillStyle = vignette;
@@ -477,7 +543,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         ring.phase += ring.speed * dt;
         const points: Array<{ x: number; y: number }> = [];
         for (let a = 0; a <= 360; a += 6) {
-          points.push(ringPoint(ring, a, cx, cy, scale));
+          points.push(ringPoint(ring, a, cx, orbitCY, scale));
         }
 
         ctx!.beginPath();
@@ -496,7 +562,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         bead.angle += bead.speed * dt;
         const ring = rings[bead.ringIdx];
         if (!ring) continue;
-        const p = ringPoint(ring, bead.angle, cx, cy, scale);
+        const p = ringPoint(ring, bead.angle, cx, orbitCY, scale);
         const fadeAlpha = bead.alpha * entranceFade;
 
         // Simple filled rect instead of arc for performance
@@ -529,7 +595,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         const segments = 30;
         for (let s = 0; s <= segments; s++) {
           const angleDeg = r.headAngle - (s / segments) * r.arcLength;
-          const p = ringPoint(ring, angleDeg, cx, cy, scale);
+          const p = ringPoint(ring, angleDeg, cx, orbitCY, scale);
           const segAlpha = 1 - s / segments; // head bright, tail fades
           if (s === 0) {
             ctx!.moveTo(p.x, p.y);
@@ -558,7 +624,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
 
         // Ring
         ctx!.beginPath();
-        ctx!.ellipse(sw.cx, sw.cy, sw.radius, sw.radius * 0.35, 0, 0, Math.PI * 2);
+        ctx!.ellipse(sw.cx, sw.cy, sw.radius, sw.radius * 0.30, 0, 0, Math.PI * 2);
         ctx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, sw.alpha);
         ctx!.lineWidth = 2;
         ctx!.stroke();
@@ -593,24 +659,22 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         sp.vy += 30 * dt; // gravity
         const alpha = sp.alpha * (1 - t);
 
-        // Removed path-based motion streak for massive performance gain on low-end devices
-
         // Head dot (fillRect for performance)
         ctx!.fillStyle = rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, alpha);
         ctx!.fillRect(sp.x - sp.size * 0.8, sp.y - sp.size * 0.8, sp.size * 1.6, sp.size * 1.6);
       }
 
       // ── Deck card ──
-      const cardH = h * CARD_HEIGHT_FRAC;
-      const cardW = cardH * CARD_ASPECT;
-      const deckCX = cx;
-      const deckCY = cy;
+      const cardW = cardPos.w > 0 ? cardPos.w : (h * CARD_HEIGHT_FRAC * CARD_ASPECT);
+      const cardH = cardPos.h > 0 ? cardPos.h : (h * CARD_HEIGHT_FRAC);
+      const deckCX = cardPos.w > 0 ? cardPos.x : cx;
+      const deckCY = cardPos.h > 0 ? cardPos.y : (h * 0.67);
       const lift = deckLiftRef.current;
       const yaw = deckYawRef.current;
       const tiltAmount = deckTiltRef.current;
 
-      // Calculate card position with lift
-      const cardCenterY = deckCY - lift * h * 0.08;
+      // Calculate card position with very subtle lift so card stays centered with flanking cards
+      const cardCenterY = deckCY - lift * Math.min(18, h * 0.025);
 
       // Yaw: simulate perspective by scaling width
       const yawRad = yaw * Math.PI / 180;
@@ -794,7 +858,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       if (lockAlphaRef.current > 0.01) {
         const la = lockAlphaRef.current;
         ctx!.save();
-        ctx!.translate(cx, cy - h * 0.02);
+        ctx!.translate(deckCX, deckCY - cardH * 0.05);
         const lockS = 2;
         ctx!.scale(lockS, lockS);
         ctx!.translate(-12, -14);
@@ -816,13 +880,13 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         ctx!.globalCompositeOperation = "lighter";
         const padW = cardW * 1.3;
         const padH = padW * 0.3;
-        const padGrad = ctx!.createRadialGradient(cx, cy, 0, cx, cy, padW);
+        const padGrad = ctx!.createRadialGradient(deckCX, deckCY, 0, deckCX, deckCY, padW);
         padGrad.addColorStop(0, rgba(255, 184, 77, bi * 0.3));
         padGrad.addColorStop(0.4, rgba(GOLD_R, GOLD_G, GOLD_B, bi * 0.15));
         padGrad.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
         ctx!.fillStyle = padGrad;
         ctx!.beginPath();
-        ctx!.ellipse(cx, cy + cardH * 0.3, padW, padH, 0, 0, Math.PI * 2);
+        ctx!.ellipse(deckCX, deckCY + cardH * 0.3, padW, padH, 0, 0, Math.PI * 2);
         ctx!.fill();
         ctx!.restore();
       }
@@ -830,8 +894,8 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       // ── Scan comet ──
       if (scanCometRef.current.active) {
         const sc = scanCometRef.current;
-        const scx = cx - cardW * 0.3 + sc.progress * cardW * 0.8;
-        const scy = cy - cardH * 0.3 + sc.progress * cardH * 0.6;
+        const scx = deckCX - cardW * 0.3 + sc.progress * cardW * 0.8;
+        const scy = cardCenterY - cardH * 0.3 + sc.progress * cardH * 0.6;
         const tailLen = 40;
 
         ctx!.save();
@@ -910,9 +974,9 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       if (nodeFlareRef.current > 0.01) {
         // Draw flare at the center rail node position
         const nf = nodeFlareRef.current;
-        const nodeX = cx;
-        const nodeY = Math.min(417, h * 0.5);
-        const flareGrad = ctx!.createRadialGradient(nodeX, nodeY, 0, nodeX, nodeY, 30);
+        const targetNodeX = nodePosRef.current.x || deckCX;
+        const targetNodeY = nodePosRef.current.y || (timelineBottom - 18);
+        const flareGrad = ctx!.createRadialGradient(targetNodeX, targetNodeY, 0, targetNodeX, targetNodeY, 30);
         flareGrad.addColorStop(0, rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, nf * 0.8));
         flareGrad.addColorStop(0.3, rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, nf * 0.4));
         flareGrad.addColorStop(1, rgba(GOLD_R, GOLD_G, GOLD_B, 0));
@@ -920,7 +984,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         ctx!.globalCompositeOperation = "lighter";
         ctx!.fillStyle = flareGrad;
         ctx!.beginPath();
-        ctx!.arc(nodeX, nodeY, 30, 0, Math.PI * 2);
+        ctx!.arc(targetNodeX, targetNodeY, 30, 0, Math.PI * 2);
         ctx!.fill();
         ctx!.restore();
       }
@@ -934,8 +998,13 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
     function updateChoreography(dt: number) {
       const state = stateRef.current;
       const { w, h } = sizeRef.current;
-      const cx = w / 2;
-      const cy = h * 0.58;
+      const cardPos = cardPosRef.current;
+      const cx = cardPos.w > 0 ? cardPos.x : w / 2;
+      const timelineBottom = timelineBottomRef.current || (h * 0.45);
+      const deckCX = cardPos.w > 0 ? cardPos.x : cx;
+      const deckCY = cardPos.h > 0 ? cardPos.y : (h * 0.67);
+      const cardH = cardPos.h > 0 ? cardPos.h : (h * CARD_HEIGHT_FRAC);
+      const cardCenterY = deckCY - deckLiftRef.current * Math.min(18, h * 0.025);
 
       if (state === "ENTRANCE") {
         entranceTimeRef.current += dt;
@@ -958,7 +1027,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
 
         // t=0.5: Shockwave + callout
         if (t < 0.5 && nt >= 0.5) {
-          spawnShockwave(cx, cy);
+          spawnShockwave(deckCX, deckCY);
           calloutAlphaRef.current = 0.01; // starts fading in
         }
 
@@ -1013,12 +1082,12 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
 
         // t=2.0: Flip-pop fan sparks
         if (t < 2.0 && nt >= 2.0) {
-          spawnFanSparks(cx, cy - h * 0.08 * deckLiftRef.current, 40);
+          spawnFanSparks(deckCX, cardCenterY, 35);
         }
 
         // t=2.5: Radial explosion
         if (t < 2.5 && nt >= 2.5) {
-          spawnRadialSparks(cx, cy - h * 0.08 * deckLiftRef.current, 100);
+          spawnRadialSparks(deckCX, cardCenterY, 80);
           bloomIntensityRef.current = 0.6;
         }
 
@@ -1044,9 +1113,10 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
 
         // t=3.5: Light thread
         if (t < 3.5 && nt >= 3.5) {
-          const cardTopY = cy - h * 0.08 * deckLiftRef.current - h * CARD_HEIGHT_FRAC * 0.5;
-          const nodeY = Math.min(417, h * 0.5);
-          spawnLightThread(cx, cardTopY, cx, nodeY);
+          const cardTopY = cardCenterY - cardH * 0.5;
+          const targetNodeX = nodePosRef.current.x || deckCX;
+          const targetNodeY = nodePosRef.current.y || (timelineBottom - 18);
+          spawnLightThread(deckCX, cardTopY, targetNodeX, targetNodeY);
         }
         if (threadRef.current && nt >= 3.5) {
           threadRef.current.progress = Math.min(1, (nt - 3.5) / 0.5);
@@ -1058,7 +1128,9 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         // t=4.0: Node flare
         if (t < 4.0 && nt >= 4.0) {
           nodeFlareRef.current = 1;
-          spawnNodeSparks(cx, Math.min(417, h * 0.5), 40);
+          const targetNodeX = nodePosRef.current.x || deckCX;
+          const targetNodeY = nodePosRef.current.y || (timelineBottom - 18);
+          spawnNodeSparks(targetNodeX, targetNodeY, 35);
         }
         if (nt >= 4.0) {
           nodeFlareRef.current *= 0.985;

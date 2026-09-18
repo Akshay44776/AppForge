@@ -192,7 +192,7 @@ export default function TwistDeck() {
         </p>
 
         {/* 1. TIMELINE RAIL & ROUND DETAILS (Desktop) */}
-        <div className="mt-20 w-full mb-16 hidden md:block relative z-50">
+        <div id="twist-timeline-desktop" className="mt-20 w-full mb-16 hidden md:block relative z-50">
           <div className="relative max-w-5xl mx-auto flex justify-between items-start">
             
             {/* The horizontal line */}
@@ -213,7 +213,7 @@ export default function TwistDeck() {
 
             {/* Tick 3: Hr 3 Twist */}
             <div className="relative z-10 flex flex-col items-center w-32">
-              <div className="timeline-dot timeline-dot--gold shadow-[0_0_15px_rgba(217,169,74,0.6)]" />
+              <div id="twist-node-hr3" className="timeline-dot timeline-dot--gold shadow-[0_0_15px_rgba(217,169,74,0.6)]" />
               <span className="timeline-label font-bold text-gold mt-3 whitespace-nowrap">Hr 3 Twist</span>
               {/* Subtle line pointing down to the deck */}
               <div className="w-px h-12 bg-gradient-to-b from-gold/40 to-transparent mt-4 opacity-50" aria-hidden />
@@ -301,7 +301,7 @@ export default function TwistDeck() {
           </div>
 
           {/* Deck */}
-          <div className="deck-scene w-44 h-60 sm:w-52 sm:h-72 justify-self-center shrink-0" style={{ opacity: deckHidden ? 0 : 1, transition: "opacity 300ms ease" }}>
+          <div id="twist-card-anchor" className="deck-scene w-44 h-60 sm:w-52 sm:h-72 justify-self-center shrink-0" style={{ opacity: deckHidden ? 0 : 1, transition: "opacity 300ms ease" }}>
             <button
               type="button"
               onClick={onClick}
