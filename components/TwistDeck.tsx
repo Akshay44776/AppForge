@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import SimulationBackground from "./SimulationBackground";
+import { useCallback, useEffect, useRef, useState } from "react";
+import TwistDeckCanvas, { TwistDeckCanvasHandle } from "./TwistDeckCanvas";
 
 /* ═══════════════════════════════════════════
    Data
@@ -129,6 +129,9 @@ function RoundDetail({ data, isHoverMode, align = "center" }: { data: RoundData;
 export default function TwistDeck() {
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [announced, setAnnounced] = useState("");
+  const [deckHidden, setDeckHidden] = useState(false);
+  const canvasRef = useRef<TwistDeckCanvasHandle>(null);
   const [fadeMode, setFadeMode] = useState(false);
 
   useEffect(() => {
@@ -146,6 +149,13 @@ export default function TwistDeck() {
   }, []);
 
   const onClick = () => {
+    // Trigger the canvas cinematic
+    canvasRef.current?.triggerReveal();
+    // Announce to screen readers
+    setAnnounced(EXAMPLES[idx]);
+    // Hide the DOM card so the gold canvas card shows through
+    setDeckHidden(true);
+
     if (fadeMode) {
       draw();
       setFlipped(true);
@@ -168,8 +178,12 @@ export default function TwistDeck() {
     "absolute inset-0 border border-line bg-surface rounded flex flex-col items-center justify-center p-6 text-center shadow-lg";
 
   return (
-    <section id="twistdeck" className="relative section-pad">
-      <SimulationBackground variant="twist" />
+    <section id="twistdeck" className="relative section-pad" style={{ minHeight: "clamp(640px, 56vw, 820px)", overflow: "hidden" }}>
+      <TwistDeckCanvas ref={canvasRef} text={EXAMPLES[idx]} onReset={() => setDeckHidden(false)} />
+      {/* Screen reader announcement */}
+      <div className="sr-only" aria-live="polite" role="status">
+        {announced}
+      </div>
       <div className="wrap relative z-10">
         <p className="kicker mb-3">The mechanic</p>
         <h2 className="font-display text-3xl sm:text-5xl leading-tight">The Twist Deck & Rounds</h2>
@@ -275,7 +289,7 @@ export default function TwistDeck() {
         <div className="mt-12 md:-mt-2 grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-10 items-center w-full max-w-5xl mx-auto relative z-10">
           
           {/* Twist severity — contained */}
-          <div className="border border-line bg-surface/60 p-6 md:p-8 max-w-sm justify-self-end w-full rounded">
+          <div className="border border-gold/40 bg-surface2 p-6 md:p-8 shadow-[0_18px_50px_rgba(0,0,0,0.55)] max-w-sm justify-self-end w-full rounded">
             <svg width="24" height="24" viewBox="0 0 34 34" className="mb-4 opacity-70" aria-hidden>
               <rect x="8" y="4" width="18" height="26" rx="2" fill="none" stroke="#d9a94a" strokeWidth="1" transform="rotate(8 17 17)" />
             </svg>
@@ -287,7 +301,7 @@ export default function TwistDeck() {
           </div>
 
           {/* Deck */}
-          <div className="deck-scene w-44 h-60 sm:w-52 sm:h-72 justify-self-center shrink-0">
+          <div className="deck-scene w-44 h-60 sm:w-52 sm:h-72 justify-self-center shrink-0" style={{ opacity: deckHidden ? 0 : 1, transition: "opacity 300ms ease" }}>
             <button
               type="button"
               onClick={onClick}
