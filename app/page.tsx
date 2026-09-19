@@ -3,7 +3,7 @@ import ScrollScrubHero from "@/components/ScrollScrubHero";
 import About from "@/components/About";
 import Tracks from "@/components/Tracks";
 import TwistDeck from "@/components/TwistDeck";
-import JudgingWall from "@/components/JudgingWall";
+import JudgingSimulation from "@/components/judging/JudgingSimulation";
 import Prizes from "@/components/Prizes";
 import Rules from "@/components/Rules";
 import People from "@/components/People";
@@ -19,7 +19,7 @@ export default function Page() {
         <About />
         <Tracks />
         <TwistDeck />
-        <JudgingWall />
+        <JudgingSimulation />
         <Prizes />
         <Rules />
         <People />
