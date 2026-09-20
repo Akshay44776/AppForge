@@ -69,7 +69,7 @@ export default function RulebookSection({
   const settled = useForgeStore((s) => s.settled);
 
   const openRule = openId ? rules.find((r) => r.id === openId) ?? null : null;
-  const desktop = tier === "desktop" && !reduced && !lowPower;
+  const desktop = !reduced; // Enable animations and 3D on all devices unless reduced motion is requested
 
   /* ---------------- capability + tier detection (§11) ---------------- */
   React.useEffect(() => {
@@ -146,12 +146,7 @@ export default function RulebookSection({
    * is the single swap point — replace the body, keep progressRef.current.
    */
   React.useEffect(() => {
-    if (tier !== "desktop") {
-      progressRef.current = 1;
-      applyCardLanding(cardRefs.current, 1);
-      forge.setSettled(true);
-      return;
-    }
+    // Removed the tier !== "desktop" check to allow animations on mobile
     if (reduced) {
       progressRef.current = 1;
       applyCardLanding(cardRefs.current, 1);

@@ -40,7 +40,7 @@ export default function RulePanel({
   const closing = React.useRef(false);
   const [scrollable, setScrollable] = React.useState(false);
 
-  const sheet = tier === "mobile";
+  const sheet = false; // Always show in center of screen as requested
   const flight = !sheet && !reducedMotion && !!originRect && !!stageRect;
 
   /* ---------------- open ---------------- */
