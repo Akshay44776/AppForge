@@ -1238,6 +1238,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       window.removeEventListener("mousemove", onMouseMove);
       io.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startReveal]);
 
   return (

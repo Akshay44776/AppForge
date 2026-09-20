@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Prizes — Cinematic prize section with hero backdrop & interactive cards

@@ -7,7 +7,7 @@ import JudgingSimulation from "@/components/judging/JudgingSimulation";
 import Prizes from "@/components/Prizes";
 import dynamic from "next/dynamic";
 
-const RulesSection = dynamic(() => import("@/components/rules/RulesSection"), {
+const RulesSection = dynamic(() => import("@/components/rulebook/RulebookSection"), {
   ssr: false,
   loading: () => (
     <section id="rules" style={{ background: "#07090d", minHeight: "100vh", padding: "clamp(4rem,10vw,8rem) 0" }}>

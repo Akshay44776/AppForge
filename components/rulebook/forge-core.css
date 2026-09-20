@@ -1,0 +1,767 @@
+/* ==========================================================================
+   Forge Core — Rules section only. Nothing here is global: every selector
+   sits under .fc-root.
+
+   §3 AUDIT (against app/globals.css, tailwind.config.ts, app/layout.tsx):
+     --ink #07090d          page background
+     --surface #10141b      panel surface
+     --surface-2 #171c24    secondary surface
+     --line rgba(236,232,222,.10)   the site's hairline border, used by
+                                     .rules-gate-card-inner et al at idle
+     --gold #d9a94a         accent (kicker text, card numbers, Prizes glow)
+     --gold-bright #f4c862  hover/active gold (Prizes card hover border)
+     --paper #ece8de        body/heading text
+     --muted #828a97        secondary text
+     font-grotesk (Space Grotesk) = display/heading, applied via .font-display
+     font-inter (Inter) = body, already the global body font-family
+   Easing actually used across the site (Prizes, Rules gate cards, Twist
+   Deck wall, Judging dock):
+     cubic-bezier(0.2, 0.8, 0.2, 1)   — entrance/reveal-on-scroll
+     cubic-bezier(0.22, 1, 0.36, 1)   — interactive snap/settle (hover, focus)
+   No overshoot/back-out easing exists anywhere in the repo, so the landing
+   overshoot keeps the prompt's own stated fallback (back.out-equivalent).
+   ========================================================================== */
+
+.fc-root {
+  --fc-bg: var(--ink);
+  --fc-bg-cool: #060b11; /* §5.2 S1 background, eased to --fc-bg by p≈0.8 */
+  --fc-border: var(--line);
+  --fc-gold: var(--gold);
+  --fc-gold-bright: var(--gold-bright);
+  --fc-gold-hot: var(--gold-bright); /* the site's only "hot" gold is gold-bright */
+  --fc-eyebrow: var(--gold); /* matches .kicker's text-gold */
+  --fc-text: var(--paper);
+  --fc-muted: var(--muted);
+  --fc-radius: 14px; /* Prizes .prize-stat-card-inner radius */
+  --fc-gold-icon-top: var(--gold);
+  --fc-gold-icon-bot: #93712f; /* dimmed gold, sits under the card number */
+
+  --fc-ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* site's snap/settle curve */
+  --fc-ease-power3: cubic-bezier(0.2, 0.8, 0.2, 1); /* site's reveal curve */
+  --fc-ease-back: cubic-bezier(0.34, 1.56, 0.64, 1); /* no site equivalent; §3's own stated fallback */
+
+  position: relative;
+  background: var(--fc-bg);
+  isolation: isolate;
+}
+
+/* ---------- stage ---------- */
+
+.fc-stage {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  contain: layout paint; /* reserve height before JS runs — no CLS */
+}
+
+.fc-stage-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+      120% 90% at 50% 50%,
+      rgba(217, 169, 74, 0.05),
+      transparent 60%
+    ),
+    var(--fc-bg);
+  pointer-events: none;
+}
+
+.fc-header {
+  position: absolute;
+  z-index: 6;
+  top: clamp(1.5rem, 6vh, 4rem);
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+/* ghost → full, §5.2 */
+.fc-ghostable {
+  opacity: var(--fc-chrome-opacity, 1);
+}
+
+.fc-traces-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.fc-canvas-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none !important;
+}
+.fc-canvas-layer * {
+  pointer-events: none !important;
+}
+
+.fc-cards-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  perspective: 900px; /* §6.3 */
+  transform-style: preserve-3d;
+}
+
+.fc-panel-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  perspective: 1200px;
+  pointer-events: none;
+}
+
+/* ---------- cluster + label ---------- */
+
+.fc-cluster {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transform: translateY(-50%);
+}
+
+.fc-cluster-label {
+  font-size: clamp(0.6875rem, 0.72vw, 0.8125rem); /* ≥ 11px §6.2 */
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fc-eyebrow);
+  white-space: nowrap;
+}
+
+.fc-cluster-cards {
+  display: flex;
+  gap: 0.9vw;
+}
+
+/* ---------- card (§8.1) ----------
+   Idle state matches this section's own .rules-gate-card-inner: a hairline
+   --line border on a near-black gradient. Hover matches Prizes' stat-card
+   hover: border brightens to --gold-bright with a gold glow. */
+
+.fc-card {
+  --tiltX: 0deg;
+  --tiltY: 0deg;
+  --lift: 0px;
+  --hover-scale: 1;
+  --land-scale: 1;
+  --land-rx: 0deg;
+  --land-ry: 0deg;
+  --land-z: 0px;
+  --land-op: 1;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: clamp(7.5rem, 9vw, 12.5rem);
+  aspect-ratio: 0.88;
+  padding: 0.7rem 0.75rem 0.65rem;
+  text-align: left;
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius);
+  background: linear-gradient(
+    170deg,
+    rgba(12, 16, 23, 0.88) 0%,
+    rgba(10, 12, 18, 0.94) 100%
+  );
+  backdrop-filter: blur(6px);
+  color: var(--fc-text);
+  cursor: pointer;
+  appearance: none;
+  transform-style: preserve-3d;
+  opacity: var(--land-op);
+  transform: translateZ(calc(var(--land-z) + var(--lift)))
+    rotateX(calc(var(--land-rx) + var(--tiltX)))
+    rotateY(calc(var(--land-ry) + var(--tiltY)))
+    scale(calc(var(--land-scale) * var(--hover-scale)));
+  transition:
+    border-color 180ms var(--fc-ease-out),
+    box-shadow 180ms var(--fc-ease-out),
+    background-color 180ms var(--fc-ease-out);
+}
+
+.fc-card:focus-visible {
+  outline: none;
+}
+
+.fc-card-icon {
+  width: 34%;
+  max-width: 2.6rem;
+  aspect-ratio: 1;
+  margin-bottom: auto;
+  opacity: 0.92;
+}
+
+.fc-card-num {
+  font-family: var(--font-grotesk), sans-serif;
+  font-size: clamp(1.25rem, 1.65vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fc-gold);
+  text-shadow: 0 0 14px rgba(217, 169, 74, 0.38);
+}
+
+.fc-card-title {
+  margin-top: 0.3rem;
+  font-size: clamp(0.8125rem, 0.86vw, 0.9375rem); /* ≥ 13px §6.2 */
+  line-height: 1.25;
+  color: var(--fc-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Rule removed to allow immediate interaction */
+
+/* hover / focus, fine pointers only (§8.1) */
+@media (hover: hover) and (pointer: fine) {
+  .fc-card[data-active="true"] {
+    border-color: var(--fc-gold-hot);
+    background: linear-gradient(
+      170deg,
+      rgba(24, 19, 8, 0.88) 0%,
+      rgba(14, 12, 18, 0.94) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(244, 200, 98, 0.35),
+      0 0 26px rgba(244, 200, 98, 0.28),
+      0 12px 38px rgba(0, 0, 0, 0.55);
+    z-index: 4;
+  }
+}
+
+.fc-card[data-active="true"] {
+  border-color: var(--fc-gold-hot);
+  box-shadow:
+    0 0 0 1px rgba(244, 200, 98, 0.35),
+    0 0 26px rgba(244, 200, 98, 0.28);
+  z-index: 4;
+  transition-duration: 180ms;
+}
+
+.fc-card[data-active="false"] {
+  transition-duration: 260ms;
+}
+
+/* energy edge — after ~0.4s of continuous hover (§8.1) */
+.fc-card-energy {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--fc-spin, 0deg),
+    rgba(244, 200, 98, 0) 0deg,
+    rgba(255, 236, 190, 0.95) 35deg,
+    rgba(244, 200, 98, 0.2) 90deg,
+    rgba(244, 200, 98, 0) 150deg,
+    rgba(255, 236, 190, 0.8) 220deg,
+    rgba(244, 200, 98, 0) 300deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transition: opacity 220ms var(--fc-ease-out);
+}
+
+.fc-card[data-energy="true"] .fc-card-energy {
+  opacity: 1;
+  animation:
+    fc-spin 2.6s linear infinite,
+    fc-flicker 0.55s steps(3, end) infinite;
+}
+
+.fc-card[data-energy="true"][data-turbulence="true"] .fc-card-energy {
+  filter: url(#fc-energy-turbulence);
+}
+
+@property --fc-spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes fc-spin {
+  to {
+    --fc-spin: 360deg;
+  }
+}
+
+@keyframes fc-flicker {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  33% {
+    filter: brightness(1.35);
+  }
+  66% {
+    filter: brightness(0.82);
+  }
+}
+
+/* ghost slot while the card is flying / panel is open (§8.3.1) */
+.fc-card[data-ghost="true"] {
+  opacity: 0.16;
+  border-style: dashed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.fc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- traces (§8.2) ---------- */
+
+.fc-trace {
+  fill: none;
+  stroke: var(--fc-gold);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.1;
+  transition: opacity 320ms var(--fc-ease-out);
+}
+
+.fc-traces[data-energised="true"] .fc-trace {
+  opacity: 0.35;
+  stroke-dasharray: 10 150;
+  animation: fc-pulse 4.2s linear infinite;
+}
+
+.fc-traces[data-energised="true"] .fc-trace[data-hot="true"] {
+  opacity: 1;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 4px rgba(244, 200, 98, 0.8));
+  animation-duration: 1.4s;
+}
+
+.fc-trace-node {
+  fill: var(--fc-gold);
+  opacity: 0.25;
+  transition: opacity 320ms var(--fc-ease-out);
+}
+
+.fc-traces[data-energised="true"] .fc-trace-node {
+  opacity: 0.7;
+}
+
+.fc-traces[data-energised="true"] .fc-trace-node[data-hot="true"] {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(244, 200, 98, 0.9));
+}
+
+@keyframes fc-pulse {
+  to {
+    stroke-dashoffset: -320;
+  }
+}
+
+/* ---------- dossier panel (§8.3) ---------- */
+
+.fc-panel {
+  position: absolute;
+  width: clamp(300px, 24vw, 380px);
+  max-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--fc-gold) 34%, transparent);
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 12, 16, 0.93),
+    rgba(6, 8, 11, 0.96)
+  );
+  backdrop-filter: blur(16px);
+  box-shadow:
+    inset 0 1px 0 rgba(244, 200, 98, 0.14),
+    0 26px 80px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.fc-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 2.4rem 0.75rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--fc-gold) 18%, transparent);
+}
+
+.fc-panel-badge {
+  flex: none;
+  padding: 0.22rem 0.62rem 0.22rem 0.5rem;
+  font-family: var(--font-grotesk), sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #120d04;
+  background: linear-gradient(180deg, var(--fc-gold-bright), var(--fc-gold));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
+}
+
+.fc-panel-title {
+  font-family: var(--font-grotesk), sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--fc-text);
+  line-height: 1.2;
+}
+
+.fc-panel-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--fc-gold) 26%, transparent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fc-gold);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 160ms var(--fc-ease-out);
+}
+
+.fc-panel-close:hover,
+.fc-panel-close:focus-visible {
+  border-color: var(--fc-gold-bright);
+  color: var(--fc-text);
+  background: rgba(244, 200, 98, 0.14);
+  outline: none;
+}
+
+.fc-panel-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem 0.85rem 1rem;
+}
+
+.fc-facts {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.fc-facts tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.fc-facts th,
+.fc-facts td {
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.fc-facts th {
+  width: 44%;
+  color: var(--fc-muted);
+}
+
+.fc-facts td {
+  color: var(--fc-text);
+}
+
+.fc-ribbon {
+  display: inline-block;
+  margin: 0.95rem 0 0.5rem;
+  padding: 0.2rem 0.75rem 0.2rem 0.85rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #1a1206;
+  background: linear-gradient(90deg, var(--fc-gold), rgba(147, 113, 47, 0.85));
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.fc-body {
+  position: relative;
+  padding-left: 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--fc-text);
+  opacity: 0.94;
+}
+
+.fc-body::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 3px;
+  height: 0.85em;
+  background: var(--fc-gold);
+}
+
+.fc-panel-more {
+  align-self: center;
+  margin-bottom: 0.4rem;
+  color: var(--fc-gold);
+  opacity: 0.75;
+  font-size: 0.7rem;
+  animation: fc-bob 1.6s ease-in-out infinite;
+}
+
+@keyframes fc-bob {
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* orbit ring around the panel (§8.3.4) */
+.fc-orbit {
+  position: absolute;
+  inset: -22px;
+  border-radius: 50% / 22%;
+  border: 1px solid transparent;
+  pointer-events: none;
+  background:
+    conic-gradient(
+        from var(--fc-orbit, 0deg),
+        rgba(255, 236, 190, 0) 0deg,
+        rgba(255, 236, 190, 0.9) 18deg,
+        rgba(244, 200, 98, 0.25) 60deg,
+        rgba(244, 200, 98, 0) 140deg
+      )
+      border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transform: rotateX(72deg);
+  opacity: 0;
+}
+
+@property --fc-orbit {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* the flying card ghost during §8.3 step 2 */
+.fc-flyer {
+  position: absolute;
+  border: 1px solid var(--fc-gold-bright);
+  border-radius: var(--fc-radius);
+  background: rgba(8, 10, 14, 0.92);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  backface-visibility: hidden;
+  box-shadow: 0 0 34px rgba(244, 200, 98, 0.35);
+}
+
+.fc-flyer span {
+  font-family: var(--font-grotesk), sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--fc-gold);
+  text-shadow: 0 0 16px rgba(244, 200, 98, 0.6);
+}
+
+/* ---------- tablet / mobile tiers (§11) ---------- */
+
+.fc-root[data-tier="tablet"] .fc-stage,
+.fc-root[data-tier="mobile"] .fc-stage {
+  height: auto;
+  padding: 3rem 0 4rem;
+}
+
+.fc-static-wrap {
+  display: grid;
+  place-items: center;
+  margin-bottom: 2.25rem;
+}
+
+.fc-grid-tablet {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem 1.5rem;
+  padding: 0 clamp(1rem, 5vw, 3rem);
+}
+
+.fc-grid-mobile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
+  padding: 0 1rem;
+}
+
+.fc-grid-tablet .fc-cluster,
+.fc-grid-mobile .fc-cluster {
+  position: static;
+  transform: none;
+}
+
+.fc-grid-mobile .fc-card {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.fc-grid-mobile .fc-cluster-cards,
+.fc-grid-tablet .fc-cluster-cards {
+  gap: 0.6rem;
+}
+
+/* CSS-only unseal for tablet (§11) */
+.fc-root[data-tier="tablet"] .fc-card,
+.fc-root[data-tier="mobile"] .fc-card {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 520ms var(--fc-ease-power3),
+    transform 520ms var(--fc-ease-power3);
+  transition-delay: calc(var(--fc-i, 0) * 60ms);
+}
+
+.fc-root[data-inview="true"][data-tier="tablet"] .fc-card,
+.fc-root[data-inview="true"][data-tier="mobile"] .fc-card {
+  opacity: 1;
+  transform: none;
+}
+
+/* bottom sheet (§11 mobile) */
+.fc-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.fc-sheet {
+  position: fixed;
+  z-index: 61;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 82vh;
+  width: auto;
+  border-radius: 16px 16px 0 0;
+  animation: fc-sheet-in 280ms var(--fc-ease-out) both;
+}
+
+@keyframes fc-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* ---------- reduced motion (§11) ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-root .fc-card,
+  .fc-root .fc-panel,
+  .fc-root .fc-trace,
+  .fc-root .fc-trace-node {
+    transition-duration: 120ms !important;
+    animation: none !important;
+  }
+
+  .fc-card-energy,
+  .fc-orbit,
+  .fc-panel-more {
+    display: none !important;
+  }
+
+  .fc-sheet {
+    animation: none;
+  }
+}
+
+/* ---------- affordance hint ----------
+   A quiet, always-visible line telling people the cards are clickable.
+   Uses the section's own tokens; scoped under .fc-root like everything else. */
+
+.fc-hint {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: clamp(1.25rem, 4vh, 2.75rem);
+  margin: 0;
+  text-align: center;
+  pointer-events: none;
+
+  font-size: clamp(0.75rem, 0.9vw, 0.875rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fc-muted);
+
+  opacity: var(--fc-chrome-opacity, 1);
+  transition: opacity 260ms var(--fc-ease-out);
+}
+
+/* the gold dot reads as a pointer cue without adding an icon dependency */
+.fc-hint::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 0.6em;
+  border-radius: 50%;
+  background: var(--fc-gold);
+  vertical-align: middle;
+  animation: fc-hint-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes fc-hint-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* while a dossier panel is open the hint has done its job */
+.fc-root[data-panel="open"] .fc-hint {
+  opacity: 0;
+}
+
+/* on the stacked tiers the stage is not a fixed-height viewport, so the hint
+   sits in normal flow beneath the cards instead of pinned to the bottom */
+.fc-root[data-tier="tablet"] .fc-hint,
+.fc-root[data-tier="mobile"] .fc-hint {
+  position: static;
+  margin: 0.85rem 0 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-hint::before {
+    animation: none;
+    opacity: 0.8;
+  }
+}
