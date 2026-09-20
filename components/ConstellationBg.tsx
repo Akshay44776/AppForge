@@ -337,13 +337,15 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
           ctx!.lineTo(b.px, b.py);
 
           if (avgGlow > 0.1) {
+            // Fake glow
+            ctx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, avgGlow * 0.3 * alpha);
+            ctx!.lineWidth = lw * 4;
+            ctx!.stroke();
+            
+            // Core
             ctx!.strokeStyle = rgba(BRIGHT_R, BRIGHT_G, BRIGHT_B, alpha);
             ctx!.lineWidth = lw;
-            ctx!.save();
-            ctx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, avgGlow * 0.5);
-            ctx!.shadowBlur = 10 * avgGlow;
             ctx!.stroke();
-            ctx!.restore();
           } else {
             ctx!.strokeStyle = rgba(232, 164, 62, alpha);
             ctx!.lineWidth = lw;
@@ -436,14 +438,18 @@ const ConstellationBg = forwardRef<ConstellationBgHandle>((_props, ref) => {
         fx!.scale(lockScale, lockScale);
         fx!.translate(-12, -12);
         
-        fx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, ease);
-        fx!.lineWidth = 1.5;
         fx!.lineCap = "round";
         fx!.lineJoin = "round";
-        fx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, ease);
-        fx!.shadowBlur = 8;
-        
         const lockPath = new Path2D("M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z");
+        
+        // Fake glow
+        fx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, ease * 0.4);
+        fx!.lineWidth = 4;
+        fx!.stroke(lockPath);
+        
+        // Core
+        fx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, ease);
+        fx!.lineWidth = 1.5;
         fx!.stroke(lockPath);
         
         fx!.restore();

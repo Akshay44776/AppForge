@@ -146,6 +146,7 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
   const dprRef = useRef(1);
   const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const lastTimeRef = useRef(0);
+  const vignetteCacheRef = useRef<{ w: number; h: number; cx: number; cy: number; grad: CanvasGradient | null }>({ w: 0, h: 0, cx: 0, cy: 0, grad: null });
 
   // Scene data
   const starsRef = useRef<Star[]>([]);
@@ -512,10 +513,13 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
       ctx!.clearRect(0, 0, w, h);
 
       // ── Vignette background ──
-      const vignette = ctx!.createRadialGradient(cx, orbitCY, 0, cx, orbitCY, Math.max(w, h) * 0.7);
-      vignette.addColorStop(0, "rgba(7,9,13,0)");
-      vignette.addColorStop(1, "rgba(3,2,5,0.6)");
-      ctx!.fillStyle = vignette;
+      if (vignetteCacheRef.current.w !== w || vignetteCacheRef.current.h !== h || vignetteCacheRef.current.cx !== cx || vignetteCacheRef.current.cy !== orbitCY) {
+        const vignette = ctx!.createRadialGradient(cx, orbitCY, 0, cx, orbitCY, Math.max(w, h) * 0.7);
+        vignette.addColorStop(0, "rgba(7,9,13,0)");
+        vignette.addColorStop(1, "rgba(3,2,5,0.6)");
+        vignetteCacheRef.current = { w, h, cx, cy: orbitCY, grad: vignette };
+      }
+      ctx!.fillStyle = vignetteCacheRef.current.grad!;
       ctx!.fillRect(0, 0, w, h);
 
       // ── Stars ──
@@ -603,14 +607,15 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
             ctx!.lineTo(p.x, p.y);
           }
         }
+        ctx!.lineCap = "round";
+        // Fake glow via thicker stroke
+        ctx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, alpha * 0.35);
+        ctx!.lineWidth = 9;
+        ctx!.stroke();
+        // Core
         ctx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, alpha);
         ctx!.lineWidth = 2.5;
-        ctx!.lineCap = "round";
-        ctx!.save();
-        ctx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, alpha * 0.6);
-        ctx!.shadowBlur = 12;
         ctx!.stroke();
-        ctx!.restore();
       }
 
       // ── Shockwaves ──
@@ -700,16 +705,19 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         ctx!.transform(1, tiltSkew, 0, 1, 0, 0);
         ctx!.translate(-deckCX, -cardCenterY);
 
-        // Card shadow
-        ctx!.save();
-        ctx!.shadowColor = rgba(0, 0, 0, 0.4);
-        ctx!.shadowBlur = 30;
-        ctx!.shadowOffsetY = 10;
+        // Card shadow (faked with semi-transparent rounded rects for performance)
+        ctx!.fillStyle = rgba(0, 0, 0, 0.15);
+        ctx!.beginPath();
+        ctx!.roundRect(x - 8, y + 5, drawW + 16, drawH + 16, 16);
+        ctx!.fill();
+        ctx!.beginPath();
+        ctx!.roundRect(x - 4, y + 8, drawW + 8, drawH + 10, 12);
+        ctx!.fill();
+
         ctx!.fillStyle = "rgba(11,11,11,0.9)";
         ctx!.beginPath();
         ctx!.roundRect(x, y, drawW, drawH, 8);
         ctx!.fill();
-        ctx!.restore();
 
         if (isEdgeOn) {
           // Edge-on: thin slab
@@ -862,13 +870,18 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         const lockS = 2;
         ctx!.scale(lockS, lockS);
         ctx!.translate(-12, -14);
-        ctx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, la);
-        ctx!.lineWidth = 1.5;
         ctx!.lineCap = "round";
         ctx!.lineJoin = "round";
-        ctx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, la);
-        ctx!.shadowBlur = 10;
         const lockPath = new Path2D("M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z");
+        
+        // Fake glow
+        ctx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, la * 0.4);
+        ctx!.lineWidth = 4.5;
+        ctx!.stroke(lockPath);
+        
+        // Core
+        ctx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, la);
+        ctx!.lineWidth = 1.5;
         ctx!.stroke(lockPath);
         ctx!.restore();
       }
@@ -935,10 +948,14 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
             if (s === 0) ctx!.moveTo(px, py);
             else ctx!.lineTo(px, py);
           }
+          // Fake glow
+          ctx!.strokeStyle = rgba(GOLD_R, GOLD_G, GOLD_B, thr.alpha * 0.35);
+          ctx!.lineWidth = 7;
+          ctx!.stroke();
+          
+          // Core
           ctx!.strokeStyle = rgba(WHITE_GOLD_R, WHITE_GOLD_G, WHITE_GOLD_B, thr.alpha * 0.7);
           ctx!.lineWidth = 2;
-          ctx!.shadowColor = rgba(GOLD_R, GOLD_G, GOLD_B, thr.alpha * 0.5);
-          ctx!.shadowBlur = 10;
           ctx!.stroke();
 
           // Head glow
