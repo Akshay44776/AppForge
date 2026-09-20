@@ -69,7 +69,7 @@ export default function RulebookSection({
   const settled = useForgeStore((s) => s.settled);
 
   const openRule = openId ? rules.find((r) => r.id === openId) ?? null : null;
-  const desktop = !reduced; // Enable animations and 3D on all devices unless reduced motion is requested
+  const desktop = tier === "desktop" && !reduced && !lowPower;
 
   /* ---------------- capability + tier detection (§11) ---------------- */
   React.useEffect(() => {
@@ -133,7 +133,7 @@ export default function RulebookSection({
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => setInView(e.isIntersecting),
-      { rootMargin: "300px 0px" }
+      { rootMargin: "0px", threshold: 0.2 } // Trigger when 20% in view so animation is seen
     );
     io.observe(el);
     return () => io.disconnect();
@@ -146,7 +146,12 @@ export default function RulebookSection({
    * is the single swap point — replace the body, keep progressRef.current.
    */
   React.useEffect(() => {
-    // Removed the tier !== "desktop" check to allow animations on mobile
+    if (tier !== "desktop") {
+      progressRef.current = 1;
+      applyCardLanding(cardRefs.current, 1);
+      forge.setSettled(true);
+      return;
+    }
     if (reduced) {
       progressRef.current = 1;
       applyCardLanding(cardRefs.current, 1);

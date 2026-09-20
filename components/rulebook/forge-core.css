@@ -637,6 +637,34 @@
 .fc-grid-mobile .fc-cluster-cards,
 .fc-grid-tablet .fc-cluster-cards {
   gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 1023px) {
+  .fc-stage {
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 6rem;
+  }
+  .fc-header {
+    position: relative !important;
+    top: 0 !important;
+    padding-top: 4rem;
+    padding-bottom: 2rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .fc-grid-mobile .fc-cluster-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .fc-grid-mobile .fc-card {
+    width: 100%;
+    flex: none;
+  }
 }
 
 /* CSS-only unseal for tablet (§11) */
