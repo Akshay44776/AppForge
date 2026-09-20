@@ -514,7 +514,8 @@ export default function Prizes() {
                 ₹45,000
                 <span className="prizes-amount-sweep" aria-hidden="true" />
               </p>
-              <p className="mt-3" style={{ color: "var(--muted)", maxWidth: "420px" }}>
+              <div className="prizes-amount-rule" aria-hidden="true" />
+              <p className="mt-3 prizes-subtitle">
                 Awarded across winning teams at the closing ceremony.
               </p>
               <p className="mt-6 text-xs leading-relaxed" style={{ color: "var(--muted)", maxWidth: "420px", opacity: 0.8 }}>

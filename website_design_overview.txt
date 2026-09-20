@@ -1,0 +1,94 @@
+APPFORGE - EVENT SITE DESIGN & DETAIL OVERVIEW
+
+1. TECH STACK & ARCHITECTURE
+--------------------------------------------------
+- Framework: Next.js 14 (App Router), Single Page Application (SPA) structure.
+- Styling: Tailwind CSS, custom CSS variables.
+- Animations: Framer Motion, GSAP (available).
+- 3D Graphics: React Three Fiber (Three.js).
+- Deployment: Standalone route or subdomain.
+
+2. GLOBAL DESIGN SYSTEM
+--------------------------------------------------
+- Theme: Dark mode with a premium, tech-focused aesthetic.
+- Colors:
+  - Ink (Background): #07090d
+  - Surface: #10141b
+  - Surface 2: #171c24
+  - Gold (Accent): #d9a94a
+  - Gold Bright: #f4c862
+  - Paper (Text): #ece8de
+  - Muted: #828a97
+  - Periwinkle: #7C9CF0
+  - Line: rgba(236, 232, 222, 0.10)
+- Typography:
+  - Display Font: Space Grotesk (headings, stylized text)
+  - Body Font: Inter (paragraphs, UI elements)
+- UI Effects: 
+  - Glassmorphic Cards (backdrop-blur, subtle borders, translucent gradients)
+  - Golden Focus Rings for accessibility
+  - 3D perspectives on specific elements (like decks)
+  - Dynamic ambient backgrounds (React Three Fiber canvas or CSS fallback)
+
+3. PAGE STRUCTURE & SECTIONS
+--------------------------------------------------
+The entire experience is a single-page scroll layout containing the following main sections:
+
+A. Navigation (Nav)
+- Sticky top navigation for quick jumping between sections.
+
+B. Hero (ScrollScrubHero)
+- Scroll-scrub video frame animations.
+- Loads frames dynamically via IntersectionObserver as the user scrolls.
+
+C. About
+- Introduction to the AppForge challenge.
+
+D. Problem Statements / Tracks
+- Features sealed "Dossiers".
+- Visuals: Uses a "scanline" animation (golden scanner moving up and down).
+- Interaction: Locked state initially. When unlocked by organizers, they reveal the problem statement with a fade-in animation.
+
+E. Twist Deck
+- A 3D interactive section indicating unexpected mid-event twists.
+- Features a 3D flip animation using CSS preserve-3d and React Three Fiber canvas (`TwistDeckCanvas`).
+- Degrades to a smooth crossfade on touch devices and reduced-motion settings.
+
+F. Judging Simulation (JudgingDeck & JudgingWall)
+- Explains the evaluation criteria.
+
+G. Prizes
+- Details what participants can win.
+
+H. Rulebook (The Twelve Gates)
+- A heavily stylized section loaded dynamically (lazy-loaded).
+- Outlines the 12 strict rules of the hackathon.
+
+I. People
+- Profiles of organizers, mentors, and judges using `PersonCard` and `StudentProfileCard`.
+- Features a `StudentTeamReel` component.
+
+J. Registration
+- Call to action pointing to the Google Form / Portal.
+
+K. Footer
+- Basic closing details and TechFest back-link.
+
+4. SPECIAL COMPONENTS & BACKGROUNDS
+--------------------------------------------------
+The site heavily utilizes customized dynamic backgrounds to give a "Genesis/Blueprint" tech aesthetic:
+- GenesisBackground
+- BlueprintBackground
+- BuildersLineBackground
+- ClassifiedBlueprintBg
+- ConstellationBackground
+- DriftingDeckBackground
+- NetworkField: Instantiates WebGL nodes. Has an intelligent fallback to a static CSS radial gradient for low-end devices or reduced motion preferences.
+- SimulationBackground
+
+5. PERFORMANCE OPTIMIZATIONS
+--------------------------------------------------
+- Heavy 3D components (`NetworkField`, `RulesSection`) are code-split and loaded lazily.
+- Frame-scrubbing images lazy-load 200% ahead of viewport.
+- 3D rendering pauses when the tab is hidden or off-screen to save battery and GPU.
+- Graceful degradation for devices with reduced motion enabled or without WebGL support.

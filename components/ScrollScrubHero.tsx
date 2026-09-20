@@ -82,7 +82,7 @@ export default function ScrollScrubHero() {
           setLoaded(count);
           if (count >= 90) setReady(true); // ~30%
         };
-        img.src = `/frames/frame_${String(i + 1).padStart(3, "0")}.jpg`;
+        img.src = `/frames/frame_${String(i + 1).padStart(3, "0")}.webp`;
       }
       framesRef.current = frames;
     };
@@ -122,7 +122,7 @@ export default function ScrollScrubHero() {
     return (
       <section id="teaser" className="relative">
         <img
-          src="/frames/frame_225.jpg"
+          src="/frames/frame_225.webp"
           alt="AppForge brand animation still"
           className="w-full h-[70vh] object-cover"
         />
