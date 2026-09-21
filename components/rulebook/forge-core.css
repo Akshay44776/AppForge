@@ -653,6 +653,11 @@
     padding-top: 4rem;
     padding-bottom: 2rem;
   }
+  .fc-grid-tablet .fc-card {
+    width: auto;
+    flex: 1 1 40%;
+    min-width: 140px;
+  }
 }
 
 @media (max-width: 639px) {

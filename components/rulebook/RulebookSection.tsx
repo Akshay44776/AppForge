@@ -149,12 +149,14 @@ export default function RulebookSection({
     if (tier !== "desktop") {
       progressRef.current = 1;
       applyCardLanding(cardRefs.current, 1);
+      rootRef.current?.style.setProperty("--fc-chrome-opacity", "1");
       forge.setSettled(true);
       return;
     }
     if (reduced) {
       progressRef.current = 1;
       applyCardLanding(cardRefs.current, 1);
+      rootRef.current?.style.setProperty("--fc-chrome-opacity", "1");
       forge.setSettled(true);
       return;
     }
