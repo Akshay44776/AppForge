@@ -65,8 +65,10 @@ export default function RulePanel({
     const or = originRect!;
     const sx = or.left - sr.left + or.width / 2;
     const sy = or.top - sr.top + or.height / 2;
-    const dx = coreCenter.x - sx;
-    const dy = coreCenter.y - sy;
+    const targetX = window.innerWidth / 2 - sr.left;
+    const targetY = window.innerHeight / 2 - sr.top;
+    const dx = targetX - sx;
+    const dy = targetY - sy;
     // arc: bow the midpoint away from the straight line (§8.3.2 curved path)
     const bow = Math.sign(dx || 1) * -0.18;
 
@@ -229,9 +231,11 @@ export default function RulePanel({
         sheet
           ? undefined
           : {
-              left: `${coreCenter.x}px`,
-              top: `${coreCenter.y}px`,
-              translate: "-50% -50%",
+              position: "fixed",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              margin: 0,
             }
       }
     >
