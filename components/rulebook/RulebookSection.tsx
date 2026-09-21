@@ -133,11 +133,11 @@ export default function RulebookSection({
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => setInView(e.isIntersecting),
-      { rootMargin: "0px", threshold: 0.2 } // Trigger when 20% in view so animation is seen
+      { rootMargin: tier === "desktop" ? "300px 0px" : "-15% 0px" } 
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [tier]);
 
   /* ---------------- scrubbed entrance timeline (§5.1) ----------------
    * Sticky pin + smoothed scroll progress. This mirrors the hero's
