@@ -583,6 +583,7 @@
   place-items: center;
   pointer-events: none;
   backface-visibility: hidden;
+  z-index: 50;
   box-shadow: 0 0 34px rgba(244, 200, 98, 0.35);
 }
 
