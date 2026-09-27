@@ -645,7 +645,7 @@
 @media (max-width: 1023px) {
   .fc-stage {
     height: auto !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     padding-bottom: 6rem;
   }
   .fc-header {
@@ -653,6 +653,18 @@
     top: 0 !important;
     padding-top: 4rem;
     padding-bottom: 2rem;
+  }
+  /* Contain the WebGL 3D core + traces to a small area on mobile */
+  .fc-canvas-layer,
+  .fc-traces-layer {
+    position: relative !important;
+    width: 240px;
+    height: 240px;
+    margin: 0 auto 1.5rem;
+    inset: unset !important;
+    overflow: hidden;
+    border-radius: 50%;
+    pointer-events: none;
   }
   .fc-grid-tablet .fc-card {
     width: auto;
