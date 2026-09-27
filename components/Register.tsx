@@ -17,19 +17,18 @@ const RegisterCountdown = dynamic(() => import("./register/RegisterCountdown"), 
 
 const IconTeam = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="6" r="2.5"/>
-    <path d="M3 19c0-3 2.7-5.5 6-5.5"/>
-    <circle cx="17" cy="6" r="2.5"/>
-    <path d="M21 19c0-3-2.7-5.5-6-5.5"/>
-    <path d="M9 13.5c3.5 0 6 2.5 6 5.5H3c0-3 2.5-5.5 6-5.5z"/>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
   </svg>
 );
 
 const IconBadge = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="14" rx="2"/>
-    <circle cx="9" cy="11" r="2"/>
-    <path d="M13 9h4M13 13h3"/>
+    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+    <circle cx="9" cy="12" r="2.5"></circle>
+    <path d="M14 10h4M14 14h4"></path>
   </svg>
 );
 
@@ -42,9 +41,8 @@ const IconRupee = () => (
 
 const IconCalendar = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="5" width="18" height="16" rx="2"/>
-    <path d="M16 3v4M8 3v4M3 9h18"/>
-    <path d="M8 13h2M14 13h2M8 17h2"/>
+    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+    <path d="M16 2v4M8 2v4M3 10h18"></path>
   </svg>
 );
 
@@ -59,7 +57,7 @@ export default function Register() {
 
       <div className="reg-content wrap">
 
-        {/* LEFT: registration card */}
+        {/* LEFT: Tall registration card */}
         <div className="reg-card">
           <p className="kicker mb-3">Registration</p>
           <h2 className="reg-heading font-display">Register your team</h2>
@@ -73,17 +71,17 @@ export default function Register() {
             best instincts — the brief will do the rest.
           </p>
           <p className="reg-price mt-4">₹400 per team, paid via event QR at check-in.</p>
-          <div className="mt-8">
+          <div className="mt-10">
             <MagneticButton />
           </div>
         </div>
 
-        {/* CENTER: floating info tags */}
+        {/* CENTER: chevron info tags */}
         <div className="reg-tags-col" aria-label="Event details">
-          <InfoTag icon={<IconTeam />}     label="Team size"   value="2–4 members"          delay={300} />
-          <InfoTag icon={<IconBadge />}    label="Eligibility" value="B.E. / B.Tech students" delay={480} />
-          <InfoTag icon={<IconRupee />}    label="Entry fee"   value="₹400 · at check-in"    delay={660} />
-          <InfoTag icon={<IconCalendar />} label="Reserve by"  value="Oct 30, 2026"           delay={840} />
+          <InfoTag icon={<IconTeam />}     label="Team size"   value="2–4 members"          delay={100} />
+          <InfoTag icon={<IconBadge />}    label="Eligibility" value="B.E. / B.Tech students" delay={250} />
+          <InfoTag icon={<IconRupee />}    label="Entry fee"   value="₹400 · at check-in"    delay={400} />
+          <InfoTag icon={<IconCalendar />} label="Reserve by"  value="Oct 30, 2026"           delay={550} />
         </div>
 
         {/* RIGHT: countdown */}
@@ -92,6 +90,7 @@ export default function Register() {
         </div>
 
       </div>
+
     </section>
   );
 }

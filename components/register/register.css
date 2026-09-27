@@ -25,46 +25,47 @@
   display: block;
 }
 
-/* ── Content grid — 4 columns matching the reference ── */
+/* ── Content grid ── */
 .reg-content {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1.1fr 0.55fr 0.55fr 1fr;
-  grid-template-areas: "card tags . countdown";
-  gap: clamp(1rem, 2.5vw, 2.5rem);
-  align-items: center;
-  padding-block: clamp(5rem, 11vw, 9rem);
+  grid-template-columns: 290px auto 350px;
+  justify-content: space-between;
+  gap: 2rem;
+  width: 100%;
+  margin: 0 auto;
+  padding-block: clamp(4rem, 8vw, 6rem);
   pointer-events: none;
 }
 
 /* ── Left registration card ── */
 .reg-card {
-  grid-area: card;
   pointer-events: auto;
   background: rgba(8, 10, 15, 0.78);
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid rgba(217, 169, 74, 0.22);
-  border-radius: 20px;
-  padding: clamp(1.75rem, 3vw, 2.75rem);
+  border-radius: 12px;
+  padding: 2.5rem 1.8rem;
   box-shadow:
     0 32px 90px rgba(0, 0, 0, 0.7),
     inset 0 1px 0 rgba(244, 200, 98, 0.13);
+  display: flex;
+  flex-direction: column;
 }
 
 .reg-heading {
-  font-size: clamp(1.875rem, 3.8vw, 3.25rem);
-  line-height: 1.08;
+  font-size: clamp(2.2rem, 3.5vw, 2.75rem);
+  line-height: 1.1;
   color: var(--paper);
   margin: 0;
 }
 
 .reg-body {
-  font-size: clamp(0.8125rem, 1vw, 0.9375rem);
-  line-height: 1.75;
+  font-size: 0.85rem;
+  line-height: 1.7;
   color: var(--muted);
-  max-width: 48ch;
 }
 
 .reg-price {
@@ -76,6 +77,7 @@
   color: var(--gold);
   text-decoration: none;
   transition: color 160ms ease;
+  font-weight: 500;
 }
 .reg-link:hover { color: var(--gold-bright); }
 
@@ -89,8 +91,8 @@
   color: #07090d;
   font-family: var(--font-grotesk), system-ui, sans-serif;
   font-weight: 600;
-  font-size: 0.9375rem;
-  border-radius: 10px;
+  font-size: 0.9rem;
+  border-radius: 8px;
   text-decoration: none;
   will-change: transform;
   cursor: pointer;
@@ -110,90 +112,79 @@
 }
 .reg-cta-btn:hover .reg-cta-arrow { transform: translateX(3px); }
 
-/* ── Info tags column ── */
+/* ── Info tags column (CENTER) ── */
 .reg-tags-col {
-  grid-area: tags;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.2rem;
   pointer-events: auto;
+  align-self: center;
+  max-width: 250px;
 }
 
 /* ── Individual info tag ── */
 .reg-info-tag {
+  position: relative;
   opacity: 0;
-  transform: translateX(20px);
-  transition:
-    opacity 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateX(-20px);
+  animation: reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
-.reg-info-tag--visible {
-  opacity: 1;
-  transform: none;
-  animation: reg-tag-bob 5s ease-in-out infinite;
-}
-.reg-info-tag--visible:nth-child(1) { animation-delay: 0s; }
-.reg-info-tag--visible:nth-child(2) { animation-delay: -1.5s; }
-.reg-info-tag--visible:nth-child(3) { animation-delay: -3s; }
-.reg-info-tag--visible:nth-child(4) { animation-delay: -4s; }
+.reg-info-tag:nth-child(1) { animation-delay: 0.1s; }
+.reg-info-tag:nth-child(2) { animation-delay: 0.2s; }
+.reg-info-tag:nth-child(3) { animation-delay: 0.3s; }
+.reg-info-tag:nth-child(4) { animation-delay: 0.4s; }
 
-@keyframes reg-tag-bob {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-5px); }
+@keyframes reg-tag-in {
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .reg-info-tag-inner {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.95rem 1.15rem;
-  background: rgba(8, 10, 16, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(217, 169, 74, 0.22);
-  /* Shield / pentagon: rectangle with pointed bottom */
-  clip-path: polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%);
-  border-radius: 0;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(244, 200, 98, 0.1);
+  gap: 1rem;
+  padding: 0.8rem 1.6rem 0.8rem 1.2rem;
+  background: rgba(8, 10, 14, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(217, 169, 74, 0.25);
+  /* Chevron pointed right */
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .reg-info-tag-icon {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   color: var(--gold);
-  filter: drop-shadow(0 0 5px rgba(217, 169, 74, 0.55));
 }
 
 .reg-info-tag-content {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  overflow: hidden;
+  gap: 0.15rem;
 }
 
 .reg-info-tag-label {
-  font-size: 0.625rem;
-  letter-spacing: 0.16em;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
-  white-space: nowrap;
 }
 
 .reg-info-tag-value {
   font-family: var(--font-grotesk), system-ui, sans-serif;
-  font-weight: 600;
-  font-size: 0.8125rem;
+  font-weight: 700;
+  font-size: 0.85rem;
   color: var(--paper);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
-/* ── Countdown column ── */
+.reg-info-tag-line {
+  display: none;
+}
+
+/* ── Countdown column (RIGHT) ── */
 .reg-countdown-col {
-  grid-area: countdown;
   pointer-events: auto;
   display: flex;
   justify-content: center;
@@ -207,32 +198,36 @@
   align-items: center;
 }
 
+/* Large gold ring behind countdown */
 .reg-ring-outer {
   position: absolute;
-  inset: -32px;
+  inset: -15px -40px;
   pointer-events: none;
   z-index: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .reg-ring-svg {
-  width: 100%;
-  height: 100%;
-  animation: reg-ring-spin 9s linear infinite;
+  width: 200px;
+  height: 200px;
+  animation: reg-ring-spin 12s linear infinite;
 }
 @keyframes reg-ring-spin { to { transform: rotate(360deg); } }
 
 .reg-ring-track {
   fill: none;
-  stroke: rgba(217, 169, 74, 0.2);
+  stroke: rgba(217, 169, 74, 0.1);
   stroke-width: 1.5;
 }
 .reg-ring-comet {
   fill: none;
-  stroke: rgba(244, 200, 98, 0.92);
-  stroke-width: 3;
+  stroke: rgba(244, 200, 98, 0.9);
+  stroke-width: 2.5;
   stroke-linecap: round;
-  stroke-dasharray: 54 530;
-  filter: drop-shadow(0 0 7px rgba(244, 200, 98, 0.75));
+  stroke-dasharray: 40 500;
+  filter: drop-shadow(0 0 6px rgba(244, 200, 98, 0.6));
 }
 
 .reg-countdown-card {
@@ -241,22 +236,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.65rem;
-  padding: 2rem 2rem;
-  background: rgba(8, 10, 16, 0.85);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  border: 1px solid rgba(217, 169, 74, 0.25);
-  border-radius: 18px;
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(244, 200, 98, 0.14);
-  min-width: 260px;
+  gap: 1.25rem;
+  padding: 1.8rem 2.5rem;
+  background: rgba(10, 12, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(217, 169, 74, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  min-width: 320px;
 }
 
 .reg-countdown-label {
-  font-size: 0.625rem;
-  letter-spacing: 0.18em;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--muted);
   margin: 0;
@@ -265,54 +258,54 @@
 .reg-countdown-digits {
   display: flex;
   align-items: flex-start;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .reg-digit-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
 }
 
 .reg-digit-label {
   font-size: 0.5rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .reg-digit-sep {
   font-family: var(--font-grotesk), system-ui, sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--gold);
   margin-bottom: 0.8rem;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .reg-countdown-date {
-  font-size: 0.625rem;
+  font-size: 0.55rem;
   color: var(--muted);
   margin: 0;
   text-align: center;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 /* ── Flip digit ── */
 .reg-flip-number {
   display: inline-flex;
-  gap: 2px;
+  gap: 3px;
 }
 
 .reg-flip-digit {
   position: relative;
   display: inline-block;
-  width: 1.9rem;
-  height: 2.4rem;
+  width: 1.8rem;
+  height: 2.2rem;
   perspective: 260px;
   font-family: var(--font-grotesk), system-ui, sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -321,10 +314,10 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14, 15, 22, 0.96) 50%, rgba(8, 9, 14, 0.98) 50%);
-  border-radius: 5px;
-  border: 1px solid rgba(217, 169, 74, 0.18);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  background: rgba(16, 18, 24, 0.95);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 .reg-flip-digit::after {
   content: "";
@@ -332,7 +325,7 @@
   left: 0; right: 0;
   top: 50%;
   height: 1px;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   z-index: 3;
 }
 
@@ -368,7 +361,7 @@
   padding-bottom: 1px;
   transform-origin: bottom center;
   backface-visibility: hidden;
-  background: rgba(14, 15, 22, 0.96);
+  background: rgba(16, 18, 24, 0.95);
   z-index: 2;
 }
 .reg-flip-flap--go {
@@ -383,43 +376,21 @@
 @media (max-width: 1100px) {
   .reg-content {
     grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "card card"
-      "tags countdown";
+    justify-content: center;
+    gap: 3rem;
   }
-  .reg-info-tag-inner {
-    clip-path: none;
-    border-radius: 12px;
-    padding-bottom: 0.7rem;
+  .reg-card {
+    grid-column: 1 / -1;
+    max-width: 600px;
+    margin: 0 auto;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .reg-content {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "card"
-      "tags"
-      "countdown";
   }
-  .reg-countdown-col { justify-content: flex-start; }
-  .reg-ring-outer { inset: -18px; }
-  .reg-countdown-card { min-width: 0; padding: 1.5rem 1.25rem; }
-  .reg-flip-digit { width: 1.6rem; height: 2rem; font-size: 1.25rem; }
-}
-
-/* ── Reduced motion ── */
-@media (prefers-reduced-motion: reduce) {
-  .reg-info-tag, .reg-info-tag--visible {
-    animation: none !important;
-    transition: opacity 300ms ease !important;
+  .reg-tags-col {
+    margin: 0 auto;
   }
-  .reg-cta-btn         { transition: none; }
-  .reg-ring-svg        { animation: none; }
-  .reg-flip-flap--go   { animation: none; }
-}
-
-.reg-countdown-placeholder {
-  height: 200px;
-  width: 300px;
 }
