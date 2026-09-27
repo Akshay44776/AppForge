@@ -684,9 +684,9 @@
   transition-delay: calc(var(--fc-i, 0) * 60ms);
 }
 
-.fc-root[data-inview="true"][data-tier="tablet"] .fc-card,
-.fc-root[data-inview="true"][data-tier="mobile"] .fc-card {
-  opacity: 1;
+.fc-root[data-tier="tablet"] .fc-card.fc-card-visible,
+.fc-root[data-tier="mobile"] .fc-card.fc-card-visible {
+  opacity: 1 !important;
   transform: none;
 }
 

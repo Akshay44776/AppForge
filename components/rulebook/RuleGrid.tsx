@@ -77,10 +77,29 @@ export default function RuleGrid({
     if (layerRef.current) ro.observe(layerRef.current);
     window.addEventListener("resize", measure);
     const t = setTimeout(measure, 120); // after fonts settle
+
+    // Observer for mobile/tablet card reveal animation
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("fc-card-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { rootMargin: "0px 0px -10% 0px" }
+    );
+    
+    const currentCards = Array.from(cardRefs.current.values());
+    currentCards.forEach((el) => io.observe(el));
+
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
       clearTimeout(t);
+      currentCards.forEach((el) => io.unobserve(el));
+      io.disconnect();
     };
   }, [measure, tier]);
 

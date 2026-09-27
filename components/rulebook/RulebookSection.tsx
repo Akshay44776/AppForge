@@ -77,11 +77,8 @@ export default function RulebookSection({
       deviceMemory?: number;
       connection?: { saveData?: boolean };
     };
-    const weak =
-      (nav.hardwareConcurrency ?? 8) <= 4 ||
-      (nav.deviceMemory ?? 8) <= 4 ||
-      nav.connection?.saveData === true ||
-      !probeWebGL2();
+    // Force WebGL rendering on all devices to ensure cinematic 3D effects are visible
+    const weak = false;
 
     const mqReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 
