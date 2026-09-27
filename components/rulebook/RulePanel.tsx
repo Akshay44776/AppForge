@@ -40,7 +40,7 @@ export default function RulePanel({
   const closing = React.useRef(false);
   const [scrollable, setScrollable] = React.useState(false);
 
-  const sheet = false; // Always centered modal on all devices
+  const sheet = tier !== "desktop"; // Bottom sheet on mobile/tablet, centered panel on desktop
   const flight = !sheet && !reducedMotion && !!originRect && !!stageRect;
 
   /* ---------------- open ---------------- */
