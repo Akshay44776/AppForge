@@ -318,8 +318,15 @@ const TwistDeckCanvas = forwardRef<TwistDeckCanvasHandle, TwistDeckCanvasProps>(
         };
       }
 
-      const hr3Node = document.getElementById("twist-node-hr3");
-      if (hr3Node) {
+      const hr3NodeDesktop = document.getElementById("twist-node-hr3");
+      const hr3NodeMobile = document.getElementById("twist-node-hr3-mobile");
+      
+      // Determine which node is currently visible (offsetParent is null if display: none)
+      const hr3Node = (hr3NodeDesktop && hr3NodeDesktop.offsetParent !== null)
+        ? hr3NodeDesktop
+        : hr3NodeMobile;
+
+      if (hr3Node && hr3Node.offsetParent !== null) {
         const r = hr3Node.getBoundingClientRect();
         nodePosRef.current = {
           x: r.left + r.width / 2 - contRect.left,

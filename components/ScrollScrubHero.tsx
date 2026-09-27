@@ -15,7 +15,7 @@ const BEATS = [
 function beatOpacity(i: number, p: number) {
   const q = i / 4;
   const fade = 0.06;
-  const inO = Math.min(1, Math.max(0, (p - q) / fade));
+  const inO = i === 0 ? 1 : Math.min(1, Math.max(0, (p - q) / fade));
   const outO = Math.min(1, Math.max(0, (q + 0.25 - p) / fade));
   return Math.min(inO, outO);
 }
@@ -82,6 +82,9 @@ export default function ScrollScrubHero() {
           count += 1;
           setLoaded(count);
           if (count >= 90) setReady(true); // ~30%
+          if (i === Math.min(FRAME_COUNT - 1, Math.max(0, Math.floor(progressRef.current * (FRAME_COUNT - 1))))) {
+            draw(i);
+          }
         };
         img.src = `/frames/frame_${String(i + 1).padStart(3, "0")}.webp`;
       }
@@ -97,6 +100,10 @@ export default function ScrollScrubHero() {
   // rAF scroll loop with passive scroll semantics (progress from wrapper rect)
   useEffect(() => {
     if (reduced || !ready) return;
+    
+    // Initial draw to prevent blank screen before scrolling
+    draw(Math.min(FRAME_COUNT - 1, Math.floor(progressRef.current * (FRAME_COUNT - 1))));
+
     let raf = 0;
     const loop = () => {
       const wrap = wrapRef.current;
@@ -166,6 +173,17 @@ export default function ScrollScrubHero() {
             </p>
           ))}
         </div>
+
+        {/* Skip to Register Button */}
+        <a
+          href="#register"
+          className="absolute bottom-8 right-6 sm:bottom-10 sm:right-10 z-50 px-5 py-2.5 bg-surface2/70 backdrop-blur-md border border-line rounded-full text-[10px] sm:text-xs uppercase tracking-widest text-paper hover:text-gold hover:border-gold/50 transition-all flex items-center gap-2"
+        >
+          Skip to Register
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </a>
       </div>
     </section>
   );

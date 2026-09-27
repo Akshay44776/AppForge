@@ -324,18 +324,18 @@ export default function RulebookSection({
         <div className="fc-stage-bg" />
         {header}
 
-        {/* tablet / mobile / reduced-motion: static SVG core, zero WebGL */}
-        {!desktop && (
+        {/* reduced-motion or low power: static SVG core, zero WebGL */}
+        {lowPower && (
           <div className="fc-static-wrap">
             <StaticCore size={tier === "mobile" ? 132 : 180} />
           </div>
         )}
 
-        {desktop && (
+        {!lowPower && (
           <CircuitTraces rects={rects} size={stage} core={coreCenter} />
         )}
 
-        {desktop && inView && stage.w > 0 && (
+        {!lowPower && inView && stage.w > 0 && (
           <ForgeCoreScene
             active={inView}
             rects={rects}

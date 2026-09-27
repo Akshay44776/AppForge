@@ -259,7 +259,7 @@ export default function TwistDeck() {
            
            <div className="relative z-10 flex flex-col items-start">
              <div className="flex items-center gap-4">
-                <div className="timeline-dot timeline-dot--gold shadow-[0_0_15px_rgba(217,169,74,0.6)]" />
+                <div id="twist-node-hr3-mobile" className="timeline-dot timeline-dot--gold shadow-[0_0_15px_rgba(217,169,74,0.6)]" />
                 <span className="timeline-label font-bold text-gold">Hr 3 Twist</span>
              </div>
            </div>

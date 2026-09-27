@@ -233,7 +233,7 @@ export default function RulePanel({
           : {
               position: "fixed",
               left: "50%",
-              top: "50%",
+              top: sheet ? "auto" : (stageRect ? `calc(50vh - ${stageRect.top}px)` : "50%"),
               translate: "-50% -50%",
               margin: 0,
               zIndex: 50,

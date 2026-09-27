@@ -210,6 +210,7 @@ export default function Tracks() {
   const cardRefsArray = useRef<(HTMLDivElement | null)[]>([null, null, null]);
   const cardRefs = useRef(cardRefsArray.current);
   const containerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const constellationRef = useRef<ConstellationBgHandle>(null);
   const handleCardClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = e.currentTarget;
@@ -222,6 +223,32 @@ export default function Tracks() {
       cardRect.width,
       cardRect.height
     );
+  }, []);
+
+  // Trigger burst automatically when the grid scrolls into view
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const rect = entry.boundingClientRect;
+            constellationRef.current?.triggerBurst(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+              320, // default card width for phone scale
+              420
+            );
+          }
+        });
+      },
+      { threshold: 0.3 } // Trigger when 30% of the grid is visible
+    );
+
+    observer.observe(grid);
+    return () => observer.disconnect();
   }, []);
 
   // Keep cardRefs.current in sync
@@ -271,7 +298,7 @@ export default function Tracks() {
         </div>
 
         {/* Domain cards grid */}
-        <div className="mt-8 grid md:grid-cols-3 gap-5">
+        <div ref={gridRef} className="mt-8 grid md:grid-cols-3 gap-5">
           {DOMAINS.map((d, i) => (
             <DomainCard
               key={d.index}
