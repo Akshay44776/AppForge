@@ -1,39 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
-interface Shard {
-  x: number; y: number; z: number;
-  vx: number; vy: number;
-  rot: number; rotV: number;
-  size: number;
-  alpha: number;
-  layer: 0 | 1; // 0 = background, 1 = foreground
-  // For assembly animation: final position on sphere surface
-  targetX: number; targetY: number;
-  assembled: boolean;
-}
-
-interface SphereFacet {
-  // Triangle 2D projected vertices
-  v0x: number; v0y: number;
-  v1x: number; v1y: number;
-  v2x: number; v2y: number;
-  brightness: number;
-}
-
-// ---- low-poly icosphere geometry (1 subdivision) ----
-function buildIcosphere(radius: number): number[][] {
+// ---- Icosphere geometry ----
+function buildIcosphere(): number[][] {
   const t = (1 + Math.sqrt(5)) / 2;
-  const verts: [number, number, number][] = [
+  const verts: number[][] = [
     [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
     [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
     [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
   ];
-  // Normalize
   const norm = verts.map(([x, y, z]) => {
     const l = Math.sqrt(x * x + y * y + z * z);
-    return [x / l * radius, y / l * radius, z / l * radius];
+    return [x / l, y / l, z / l];
   });
   const faces = [
     [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
@@ -41,471 +20,394 @@ function buildIcosphere(radius: number): number[][] {
     [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
     [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1],
   ];
-  return faces.map(([a, b, c]) => [
-    ...norm[a], ...norm[b], ...norm[c]
-  ]);
+  return faces.map(([a, b, c]) => [...norm[a], ...norm[b], ...norm[c]]);
 }
 
-// Project 3D point to 2D with simple perspective
-function project(x: number, y: number, z: number, fov: number, cx: number, cy: number) {
-  const scale = fov / (fov + z);
-  return { sx: cx + x * scale, sy: cy + y * scale, scale };
-}
+const ICO = buildIcosphere();
 
-// Rotate point around Y axis
 function rotY(x: number, y: number, z: number, a: number) {
   return { x: x * Math.cos(a) + z * Math.sin(a), y, z: -x * Math.sin(a) + z * Math.cos(a) };
 }
-// Rotate around X axis
 function rotX(x: number, y: number, z: number, a: number) {
   return { x, y: y * Math.cos(a) - z * Math.sin(a), z: y * Math.sin(a) + z * Math.cos(a) };
 }
 
-function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-function clamp01(t: number) { return t < 0 ? 0 : t > 1 ? 1 : t; }
 function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
-function easeInOutQuad(t: number) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
-
-const INTRO_DURATION = 5000; // ms
-const SHARD_COUNT_BG = 28;
-const SHARD_COUNT_FG = 10;
+function easeInOut(t: number) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function clamp(t: number, a = 0, b = 1) { return t < a ? a : t > b ? b : t; }
+function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 
 export default function RegisterScene() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
-    introStart: 0,
-    introPlayed: false,
-    animating: false,
     angle: 0,
+    tiltX: 0.22,
     pulsePhase: 0,
     mouseX: 0,
     mouseY: 0,
+    introStart: -1,
     reduced: false,
   });
-
-  const shardsRef = useRef<Shard[]>([]);
-  const assembledShardPositions = useRef<{ x: number; y: number }[]>([]);
-
-  const init = useCallback((canvas: HTMLCanvasElement) => {
-    const W = canvas.width;
-    const H = canvas.height;
-    const s = stateRef.current;
-    s.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Sphere shard destination positions (on surface of projected sphere)
-    const facets = buildIcosphere(1);
-    const positions: { x: number; y: number }[] = facets.map(([x, y, z]) => {
-      const cx = facets[0][0];
-      const cy = facets[0][1];
-      const r = rotY(x, y, z, Math.PI * 0.2);
-      const r2 = rotX(r.x, r.y, r.z, 0.3);
-      const proj = project(r2.x * 130, r2.y * 130, r2.z * 130, 500, W * 0.54, H * 0.5);
-      return { x: proj.sx, y: proj.sy };
-    });
-    assembledShardPositions.current = positions;
-
-    const shards: Shard[] = [];
-    for (let i = 0; i < SHARD_COUNT_BG + SHARD_COUNT_FG; i++) {
-      const layer: 0 | 1 = i < SHARD_COUNT_BG ? 0 : 1;
-      const pos = i < positions.length ? positions[i % positions.length] : {
-        x: Math.random() * W, y: Math.random() * H
-      };
-      shards.push({
-        x: s.reduced ? (W * 0.3 + Math.random() * W * 0.5) : (Math.random() * W),
-        y: s.reduced ? (H * 0.2 + Math.random() * H * 0.6) : (Math.random() * H),
-        z: 0,
-        vx: (Math.random() - 0.5) * 0.25 * (layer + 0.5),
-        vy: (Math.random() - 0.5) * 0.18 * (layer + 0.5),
-        rot: Math.random() * Math.PI * 2,
-        rotV: (Math.random() - 0.5) * 0.005 * (layer + 0.5),
-        size: layer === 0 ? (10 + Math.random() * 30) : (30 + Math.random() * 70),
-        alpha: layer === 0 ? (0.06 + Math.random() * 0.1) : (0.04 + Math.random() * 0.07),
-        layer,
-        targetX: pos.x,
-        targetY: pos.y,
-        assembled: false,
-      });
-    }
-    shardsRef.current = shards;
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let raf = 0;
     let alive = true;
+    let prevTime = 0;
 
-    const resize = () => {
-      const parent = canvas.parentElement!;
+    const s = stateRef.current;
+    s.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Shard field
+    interface Shard {
+      x: number; y: number;
+      vx: number; vy: number;
+      rot: number; rv: number;
+      size: number; alpha: number;
+      layer: 0 | 1;
+      startX: number; startY: number;
+      tx: number; ty: number; // target on sphere surface
+    }
+    let shards: Shard[] = [];
+
+    function initShards(W: number, H: number, sphereX: number, sphereY: number, R: number) {
+      shards = [];
+      // Build target positions: vertices on projected sphere
+      const targets: { x: number; y: number }[] = ICO.map((f) => {
+        const ry = rotY(f[0], f[1], f[2], 0.6);
+        const rx = rotX(ry.x, ry.y, ry.z, 0.3);
+        const sc = 600 / (600 + rx.z * R);
+        return { x: sphereX + rx.x * R * sc, y: sphereY + rx.y * R * sc };
+      });
+
+      const count = s.reduced ? 12 : 38;
+      for (let i = 0; i < count; i++) {
+        const layer: 0 | 1 = i < count * 0.7 ? 0 : 1;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = W * 0.35 + Math.random() * W * 0.25;
+        const tx = targets[i % targets.length]?.x ?? sphereX;
+        const ty = targets[i % targets.length]?.y ?? sphereY;
+        shards.push({
+          x: sphereX + Math.cos(angle) * dist,
+          y: sphereY + Math.sin(angle) * dist,
+          startX: sphereX + Math.cos(angle) * dist,
+          startY: sphereY + Math.sin(angle) * dist,
+          vx: (Math.random() - 0.5) * (layer === 0 ? 0.18 : 0.3),
+          vy: (Math.random() - 0.5) * (layer === 0 ? 0.12 : 0.22),
+          rot: Math.random() * Math.PI * 2,
+          rv: (Math.random() - 0.5) * 0.004,
+          size: layer === 0 ? 10 + Math.random() * 28 : 28 + Math.random() * 55,
+          alpha: layer === 0 ? 0.07 + Math.random() * 0.12 : 0.04 + Math.random() * 0.06,
+          layer,
+          tx, ty,
+        });
+      }
+    }
+
+    function resize() {
+      const parent = canvas!.parentElement!;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = parent.clientWidth * dpr;
-      canvas.height = parent.clientHeight * dpr;
-      canvas.style.width = parent.clientWidth + "px";
-      canvas.style.height = parent.clientHeight + "px";
-      init(canvas);
-    };
+      canvas!.width = Math.round(parent.clientWidth * dpr);
+      canvas!.height = Math.round(parent.clientHeight * dpr);
+      canvas!.style.width = parent.clientWidth + "px";
+      canvas!.style.height = parent.clientHeight + "px";
+      const W = canvas!.width, H = canvas!.height;
+      const sphereX = W * 0.50;
+      const sphereY = H * 0.50;
+      const R = Math.min(W, H) * 0.26;
+      initShards(W, H, sphereX, sphereY, R);
+    }
     resize();
     window.addEventListener("resize", resize);
 
-    // Parallax on mouse
     const onMouse = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      stateRef.current.mouseX = (e.clientX - rect.left) / rect.width - 0.5;
-      stateRef.current.mouseY = (e.clientY - rect.top) / rect.height - 0.5;
+      const r = canvas!.getBoundingClientRect();
+      s.mouseX = ((e.clientX - r.left) / r.width - 0.5);
+      s.mouseY = ((e.clientY - r.top) / r.height - 0.5);
     };
     window.addEventListener("mousemove", onMouse);
 
-    // Start intro when scrolled into view
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !stateRef.current.animating) {
-        stateRef.current.animating = true;
-        if (!stateRef.current.introPlayed) {
-          stateRef.current.introStart = performance.now();
-        }
+    // Trigger intro when section enters view
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && s.introStart < 0) {
+        s.introStart = performance.now();
         if (!raf) raf = requestAnimationFrame(draw);
       } else if (!entry.isIntersecting) {
         cancelAnimationFrame(raf);
         raf = 0;
-        stateRef.current.animating = false;
       }
-    }, { threshold: 0.1 });
-    observer.observe(canvas.parentElement!);
+    }, { threshold: 0.05 });
+    io.observe(canvas!.parentElement!);
 
-    const GOLD = "#d9a94a";
-    const GOLD_BRIGHT = "#f4c862";
-    const GOLD_DIM = "#8A6A2E";
-    const OBSIDIAN = "rgba(8,9,14,0.88)";
+    // Start immediately if already visible
+    s.introStart = performance.now();
+    raf = requestAnimationFrame(draw);
 
-    function drawSphere(
-      ctx: CanvasRenderingContext2D,
-      cx: number,
-      cy: number,
-      angleY: number,
-      angleX: number,
-      emissive: number
-    ) {
-      const facets = buildIcosphere(1);
-      const RADIUS = Math.min(canvas!.width, canvas!.height) * 0.22;
-      const FOV = 500;
-
-      // Sort by Z (painter's algorithm)
-      const projected = facets.map((f) => {
-        const r0 = rotY(f[0], f[1], f[2], angleY);
-        const r1 = rotY(f[3], f[4], f[5], angleY);
-        const r2 = rotY(f[6], f[7], f[8], angleY);
-        const verts = [
-          rotX(r0.x, r0.y, r0.z, angleX),
-          rotX(r1.x, r1.y, r1.z, angleX),
-          rotX(r2.x, r2.y, r2.z, angleX),
-        ];
-        const avgZ = (verts[0].z + verts[1].z + verts[2].z) / 3;
-
-        const p = [
-          project(verts[0].x * RADIUS, verts[0].y * RADIUS, verts[0].z * RADIUS, FOV, cx, cy),
-          project(verts[1].x * RADIUS, verts[1].y * RADIUS, verts[1].z * RADIUS, FOV, cx, cy),
-          project(verts[2].x * RADIUS, verts[2].y * RADIUS, verts[2].z * RADIUS, FOV, cx, cy),
-        ];
-
-        // Normal for lighting
-        const ax = verts[1].x - verts[0].x;
-        const ay = verts[1].y - verts[0].y;
-        const az = verts[1].z - verts[0].z;
-        const bx = verts[2].x - verts[0].x;
-        const by = verts[2].y - verts[0].y;
-        const bz = verts[2].z - verts[0].z;
-        const nx = ay * bz - az * by;
-        const ny = az * bx - ax * bz;
-        const nz = ax * by - ay * bx;
-        const nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-        const dot = Math.max(0, (nx / nl * 0.5 + ny / nl * 0.3 + nz / nl * 0.8));
-
-        return { p, avgZ, dot, front: avgZ < 0 };
-      });
-
-      projected.sort((a, b) => b.avgZ - a.avgZ);
-
-      for (const { p, dot, front } of projected) {
-        if (!front) continue;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(p[0].sx, p[0].sy);
-        ctx.lineTo(p[1].sx, p[1].sy);
-        ctx.lineTo(p[2].sx, p[2].sy);
-        ctx.closePath();
-
-        // Dark obsidian facet with gold rim glow via emissive
-        const baseDark = `rgba(8, 9, 16, ${0.85 + dot * 0.1})`;
-        const emissiveColor = `rgba(217,169,74,${emissive * dot * 0.55})`;
-        ctx.fillStyle = baseDark;
-        ctx.fill();
-
-        // Emissive inner glow blending
-        if (emissive > 0.05) {
-          ctx.globalCompositeOperation = "lighter";
-          ctx.fillStyle = emissiveColor;
-          ctx.fill();
-          ctx.globalCompositeOperation = "source-over";
-        }
-
-        // Gold edge seams
-        ctx.strokeStyle = `rgba(217,169,74,${0.18 + emissive * 0.45 + dot * 0.1})`;
-        ctx.lineWidth = 0.7;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // Inner glow core
-      if (emissive > 0.05) {
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, RADIUS * 0.6);
-        grd.addColorStop(0, `rgba(244,200,98,${emissive * 0.55})`);
-        grd.addColorStop(0.5, `rgba(217,169,74,${emissive * 0.18})`);
-        grd.addColorStop(1, "transparent");
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.beginPath();
-        ctx.arc(cx, cy, RADIUS * 0.65, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    function drawShard(
-      ctx: CanvasRenderingContext2D,
-      x: number, y: number, rot: number, size: number, alpha: number, emissive: number
-    ) {
+    function drawShard(ctx: CanvasRenderingContext2D, x: number, y: number, rot: number, size: number, alpha: number) {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rot);
       ctx.globalAlpha = alpha;
-      // Triangle shard
       ctx.beginPath();
       ctx.moveTo(0, -size);
-      ctx.lineTo(size * 0.6, size * 0.5);
-      ctx.lineTo(-size * 0.6, size * 0.5);
+      ctx.lineTo(size * 0.58, size * 0.55);
+      ctx.lineTo(-size * 0.58, size * 0.55);
       ctx.closePath();
-      ctx.fillStyle = "rgba(8,9,14,0.82)";
+      ctx.fillStyle = "rgba(8,9,14,0.88)";
       ctx.fill();
-      // Gold rim on one edge
-      ctx.strokeStyle = `rgba(217,169,74,${0.15 + emissive * 0.3})`;
+      ctx.strokeStyle = "rgba(217,169,74,0.22)";
       ctx.lineWidth = 0.8;
       ctx.stroke();
       ctx.restore();
     }
 
-    function drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number) {
-      const floorTop = H * 0.78;
-      const grd = ctx.createLinearGradient(0, floorTop, 0, H);
-      grd.addColorStop(0, "rgba(10,10,16,0.0)");
-      grd.addColorStop(0.2, "rgba(8,9,14,0.6)");
-      grd.addColorStop(1, "rgba(6,7,10,0.96)");
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, floorTop, W, H - floorTop);
+    function drawSphere(ctx: CanvasRenderingContext2D, cx: number, cy: number, R: number, angleY: number, tiltX: number, emissive: number) {
+      const FOV = 600;
 
-      // Reflective sheen
-      const sheen = ctx.createLinearGradient(0, floorTop, W, floorTop + 30);
-      sheen.addColorStop(0, "transparent");
-      sheen.addColorStop(0.45, "rgba(217,169,74,0.04)");
-      sheen.addColorStop(0.55, "rgba(217,169,74,0.07)");
-      sheen.addColorStop(1, "transparent");
-      ctx.fillStyle = sheen;
-      ctx.fillRect(0, floorTop, W, 30);
-    }
+      const projected = ICO.map((f) => {
+        const r0 = rotY(f[0], f[1], f[2], angleY);
+        const v0 = rotX(r0.x, r0.y, r0.z, tiltX);
+        const r1 = rotY(f[3], f[4], f[5], angleY);
+        const v1 = rotX(r1.x, r1.y, r1.z, tiltX);
+        const r2 = rotY(f[6], f[7], f[8], angleY);
+        const v2 = rotX(r2.x, r2.y, r2.z, tiltX);
 
-    function drawGodRay(ctx: CanvasRenderingContext2D, W: number, H: number, progress: number) {
+        const avgZ = (v0.z + v1.z + v2.z) / 3;
+        const sc0 = FOV / (FOV + v0.z * R); const p0 = { x: cx + v0.x * R * sc0, y: cy + v0.y * R * sc0 };
+        const sc1 = FOV / (FOV + v1.z * R); const p1 = { x: cx + v1.x * R * sc1, y: cy + v1.y * R * sc1 };
+        const sc2 = FOV / (FOV + v2.z * R); const p2 = { x: cx + v2.x * R * sc2, y: cy + v2.y * R * sc2 };
+
+        // Lighting normal
+        const ax = v1.x - v0.x, ay = v1.y - v0.y, az = v1.z - v0.z;
+        const bx = v2.x - v0.x, by = v2.y - v0.y, bz = v2.z - v0.z;
+        const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+        const nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+        const dot = Math.max(0, (nx / nl * 0.4 + ny / nl * -0.3 + nz / nl * 0.86));
+        return { p0, p1, p2, avgZ, dot };
+      });
+
+      // Painter's sort
+      projected.sort((a, b) => b.avgZ - a.avgZ);
+
+      for (const { p0, p1, p2, avgZ, dot } of projected) {
+        // Only draw front-facing (avgZ < 0 means facing camera in our coordinate space)
+        if (avgZ > 0.35) continue;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.closePath();
+
+        // Facet fill: dark obsidian
+        const darkness = 0.12 + dot * 0.15;
+        ctx.fillStyle = `rgba(${Math.round(8 + darkness * 30)},${Math.round(9 + darkness * 25)},${Math.round(14 + darkness * 30)},0.94)`;
+        ctx.fill();
+
+        // Emissive gold bleed through facets
+        if (emissive > 0.04) {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.fillStyle = `rgba(217,140,40,${emissive * dot * 0.4})`;
+          ctx.fill();
+          ctx.globalCompositeOperation = "source-over";
+        }
+
+        // Edge seams — gold
+        ctx.strokeStyle = `rgba(217,169,74,${0.25 + emissive * 0.55 + dot * 0.12})`;
+        ctx.lineWidth = 0.9;
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Inner core glow
+      if (emissive > 0.02) {
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
+        grd.addColorStop(0, `rgba(244,200,98,${emissive * 0.6})`);
+        grd.addColorStop(0.4, `rgba(217,140,50,${emissive * 0.25})`);
+        grd.addColorStop(1, "transparent");
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.75, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Outer ambient glow halo
+      const halo = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.4);
+      halo.addColorStop(0, `rgba(217,169,74,${0.04 + emissive * 0.08})`);
+      halo.addColorStop(1, "transparent");
       ctx.save();
-      const grd = ctx.createLinearGradient(W, 0, W * 0.3, H * 0.7);
-      grd.addColorStop(0, `rgba(244,200,98,${0.06 * progress})`);
-      grd.addColorStop(0.4, `rgba(217,169,74,${0.03 * progress})`);
-      grd.addColorStop(1, "transparent");
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, W, H);
-      ctx.restore();
-    }
-
-    function drawDustParticle(
-      ctx: CanvasRenderingContext2D,
-      x: number, y: number, alpha: number
-    ) {
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = "#d9a94a";
+      ctx.globalCompositeOperation = "lighter";
       ctx.beginPath();
-      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.arc(cx, cy, R * 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = halo;
       ctx.fill();
       ctx.restore();
     }
 
-    const dustParticles = Array.from({ length: 40 }, () => ({
+    const dustParticles = Array.from({ length: s.reduced ? 0 : 35 }, () => ({
       x: Math.random(), y: Math.random(),
-      speed: 0.0002 + Math.random() * 0.0003,
-      alpha: 0.1 + Math.random() * 0.2,
+      spd: 0.00015 + Math.random() * 0.00025,
+      alpha: 0.08 + Math.random() * 0.18,
     }));
-
-    let prevTime = 0;
 
     function draw(now: number) {
       if (!alive) return;
-      const s = stateRef.current;
-      const dt = Math.min((now - prevTime) / 1000, 0.05);
+      const dt = Math.min((now - (prevTime || now)) / 1000, 0.05);
       prevTime = now;
 
-      const ctx = canvas!.getContext("2d");
-      if (!ctx) return;
-      const W = canvas!.width;
-      const H = canvas!.height;
+      const W = canvas!.width, H = canvas!.height;
+      const ctx = canvas!.getContext("2d")!;
 
       ctx.clearRect(0, 0, W, H);
 
-      // Background gradient
+      // Dark bg gradient
       const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, "#06080b");
-      bg.addColorStop(1, "#08090e");
+      bg.addColorStop(0, "#060809");
+      bg.addColorStop(1, "#08090f");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
 
-      // Intro timeline
-      const elapsed = now - s.introStart;
-      const introP = s.reduced ? 1 : clamp01(elapsed / INTRO_DURATION);
+      const elapsed = now - (s.introStart > 0 ? s.introStart : now);
+      const INTRO_DUR = 5000;
+      const introP = s.reduced ? 1 : clamp(elapsed / INTRO_DUR);
 
-      // Emissive peaks at t=2.0-3.5s (p=0.4-0.7) then eases to 0.15
-      let emissive = 0;
-      if (introP < 0.4) {
-        emissive = easeOutCubic(introP / 0.4) * 0.3;
-      } else if (introP < 0.7) {
-        emissive = 0.3 + easeInOutQuad((introP - 0.4) / 0.3) * 0.7;
-      } else {
-        emissive = 1.0 - easeOutCubic((introP - 0.7) / 0.3) * 0.8;
-      }
-      // Idle pulse after intro
+      // Emissive curve: peaks at ~50-65% of intro, settles to ambient pulse
+      let emissive: number;
+      if (introP < 0.5) emissive = easeOutCubic(introP / 0.5) * 0.45;
+      else if (introP < 0.72) emissive = 0.45 + easeInOut((introP - 0.5) / 0.22) * 0.55;
+      else emissive = 1.0 - easeOutCubic((introP - 0.72) / 0.28) * 0.82;
       if (introP >= 1) {
-        s.pulsePhase += dt * (Math.PI * 2 / 5); // 5s cycle
-        emissive = 0.15 + Math.sin(s.pulsePhase) * 0.07;
+        s.pulsePhase += dt * (Math.PI * 2 / 5);
+        emissive = 0.16 + Math.sin(s.pulsePhase) * 0.06;
       }
 
-      // Sphere rotation
-      s.angle += dt * 0.045; // ~2.6°/s
+      s.angle += dt * 0.042;
+      const sphereX = W * 0.50 + s.mouseX * W * -0.012;
+      const sphereY = H * 0.50 + s.mouseY * H * -0.009;
+      const R = Math.min(W, H) * 0.26;
 
-      const SPHERE_X = W * 0.54 + stateRef.current.mouseX * W * -0.015;
-      const SPHERE_Y = H * 0.50 + stateRef.current.mouseY * H * -0.012;
+      // God ray from top-right
+      const rayAlpha = clamp(elapsed / 8000) * 0.18;
+      const grd = ctx.createLinearGradient(W, 0, W * 0.1, H * 0.8);
+      grd.addColorStop(0, `rgba(244,200,98,${rayAlpha})`);
+      grd.addColorStop(0.35, `rgba(217,140,50,${rayAlpha * 0.45})`);
+      grd.addColorStop(1, "transparent");
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
 
-      // God ray (ramps in 0→7s)
-      drawGodRay(ctx, W, H, Math.min(1, elapsed / 7000));
-
-      // Background shards
-      const shards = shardsRef.current;
+      // Background shards — converge during intro
+      const convP = easeOutCubic(clamp(introP / 0.65));
       for (const sh of shards) {
         if (sh.layer !== 0) continue;
-
-        if (introP < 0.6 && !s.reduced) {
-          // Convergence phase
-          const convP = easeOutCubic(clamp01(introP / 0.6));
-          const px = lerp(sh.x, sh.targetX, convP);
-          const py = lerp(sh.y, sh.targetY, convP);
-          drawShard(ctx, px, py, sh.rot, sh.size * lerp(1, 0.3, convP), sh.alpha, emissive);
+        let sx: number, sy: number;
+        if (introP < 1 && !s.reduced) {
+          sx = lerp(sh.startX, sh.tx, convP);
+          sy = lerp(sh.startY, sh.ty, convP);
         } else {
-          // Drift phase
-          sh.x += sh.vx + stateRef.current.mouseX * -0.3;
+          sh.x += sh.vx + s.mouseX * -0.25;
           sh.y += sh.vy;
-          sh.rot += sh.rotV;
-          if (sh.x < -120) sh.x = W + 60;
-          if (sh.x > W + 120) sh.x = -60;
-          if (sh.y < -120) sh.y = H + 60;
-          if (sh.y > H + 120) sh.y = -60;
-          drawShard(ctx, sh.x, sh.y, sh.rot, sh.size, sh.alpha, 0);
+          sh.rot += sh.rv;
+          if (sh.x < -100) sh.x = W + 50; if (sh.x > W + 100) sh.x = -50;
+          if (sh.y < -100) sh.y = H + 50; if (sh.y > H + 100) sh.y = -50;
+          sx = sh.x; sy = sh.y;
         }
+        drawShard(ctx, sx, sy, sh.rot, sh.size, sh.alpha);
       }
 
-      // Guide lines during convergence
-      if (introP < 0.75 && !s.reduced) {
-        const guideAlpha = Math.max(0, 1 - introP / 0.75);
+      // Guide lines
+      if (introP < 0.8 && !s.reduced) {
+        const gAlpha = Math.max(0, (1 - introP / 0.8)) * 0.35 * convP;
         for (const sh of shards) {
           if (sh.layer !== 0) continue;
-          const convP = easeOutCubic(clamp01(introP / 0.6));
-          const px = lerp(sh.x, sh.targetX, convP);
-          const py = lerp(sh.y, sh.targetY, convP);
+          const sx = lerp(sh.startX, sh.tx, convP);
+          const sy = lerp(sh.startY, sh.ty, convP);
           ctx.save();
-          ctx.globalAlpha = guideAlpha * 0.3 * convP;
-          ctx.strokeStyle = `rgba(217,169,74,1)`;
+          ctx.globalAlpha = gAlpha;
+          ctx.strokeStyle = "rgba(217,169,74,0.8)";
           ctx.lineWidth = 0.5;
-          ctx.setLineDash([3, 8]);
+          ctx.setLineDash([2, 10]);
           ctx.beginPath();
-          ctx.moveTo(px, py);
-          ctx.lineTo(SPHERE_X, SPHERE_Y);
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sphereX, sphereY);
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.restore();
         }
       }
 
-      // Floor
-      drawFloor(ctx, W, H);
+      // Floor reflection
+      const floorY = H * 0.78;
+      const floorGrd = ctx.createLinearGradient(0, floorY, 0, H);
+      floorGrd.addColorStop(0, "rgba(6,8,9,0)");
+      floorGrd.addColorStop(0.25, "rgba(6,8,9,0.7)");
+      floorGrd.addColorStop(1, "rgba(5,7,8,0.98)");
+      ctx.fillStyle = floorGrd;
+      ctx.fillRect(0, floorY, W, H - floorY);
 
-      // Floor reflection of sphere
+      // Mirror sphere
       if (introP > 0.5) {
         ctx.save();
-        ctx.globalAlpha = Math.min(0.12, (introP - 0.5) * 0.24);
-        ctx.scale(1, -0.25);
-        ctx.translate(0, -H * 0.78 * 4 - H * 0.22 * 4);
-        // Mirror sphere below floor
-        ctx.filter = "blur(3px)";
-        drawSphere(ctx, SPHERE_X, H * 0.78, s.angle, 0.18, emissive * 0.3);
+        ctx.globalAlpha = Math.min(0.1, (introP - 0.5) * 0.2);
+        ctx.scale(1, -0.2);
+        ctx.translate(0, -(floorY) * 2 / 0.2 - 0);
+        ctx.filter = "blur(2px)";
+        drawSphere(ctx, sphereX, floorY, R, s.angle, s.tiltX, emissive * 0.4);
         ctx.filter = "none";
         ctx.restore();
       }
 
-      // Sphere (appears after intro begins converging)
-      const sphereAlpha = s.reduced ? 1 : clamp01((introP - 0.35) / 0.25);
-      if (sphereAlpha > 0.01) {
-        ctx.save();
-        ctx.globalAlpha = sphereAlpha;
-        drawSphere(ctx, SPHERE_X, SPHERE_Y, s.angle, 0.22, emissive);
-        ctx.restore();
-      }
+      // === SPHERE ===
+      drawSphere(ctx, sphereX, sphereY, R, s.angle, s.tiltX, emissive);
 
       // Foreground shards
       for (const sh of shards) {
         if (sh.layer !== 1) continue;
-        if (introP < 0.8 && !s.reduced) continue; // wait for intro to mostly settle
-        sh.x += sh.vx + stateRef.current.mouseX * 0.6;
+        if (introP < 0.75 && !s.reduced) continue;
+        sh.x += sh.vx + s.mouseX * 0.55;
         sh.y += sh.vy;
-        sh.rot += sh.rotV;
-        if (sh.x < -160) sh.x = W + 80;
-        if (sh.x > W + 160) sh.x = -80;
-        if (sh.y < -160) sh.y = H + 80;
-        if (sh.y > H + 160) sh.y = -80;
-        drawShard(ctx, sh.x, sh.y, sh.rot, sh.size, sh.alpha * 0.65, 0);
+        sh.rot += sh.rv;
+        if (sh.x < -160) sh.x = W + 80; if (sh.x > W + 160) sh.x = -80;
+        if (sh.y < -160) sh.y = H + 80; if (sh.y > H + 160) sh.y = -80;
+        drawShard(ctx, sh.x, sh.y, sh.rot, sh.size, sh.alpha * 0.6);
       }
 
-      // Ambient gold dust
-      if (!s.reduced) {
-        for (const p of dustParticles) {
-          p.y -= p.speed;
-          if (p.y < 0) { p.y = 1; p.x = Math.random(); }
-          drawDustParticle(ctx, p.x * W, p.y * H, p.alpha * sphereAlpha);
-        }
-      }
-
-      // Sparkle decoration (bottom-right)
-      const sparkAlpha = clamp01((introP - 0.8) / 0.2);
-      if (sparkAlpha > 0.01) {
-        const sx = W - 48;
-        const sy = H - 48;
+      // Gold dust
+      for (const p of dustParticles) {
+        p.y -= p.spd;
+        if (p.y < 0) { p.y = 1; p.x = Math.random(); }
         ctx.save();
-        ctx.globalAlpha = sparkAlpha * (0.6 + 0.4 * Math.sin(now / 800));
-        ctx.strokeStyle = GOLD;
+        ctx.globalAlpha = p.alpha * clamp(introP * 2);
+        ctx.fillStyle = "#d9a94a";
+        ctx.beginPath();
+        ctx.arc(p.x * W, p.y * H, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Sparkle
+      const sparkA = clamp((introP - 0.85) / 0.15);
+      if (sparkA > 0.01) {
+        const sx = W - W * 0.08, sy = H - H * 0.12;
+        ctx.save();
+        ctx.globalAlpha = sparkA * (0.55 + 0.45 * Math.sin(now / 900));
+        ctx.strokeStyle = "#d9a94a";
         ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
         for (let a = 0; a < 4; a++) {
-          const angle = (a / 4) * Math.PI;
+          const ang = (a / 4) * Math.PI;
           ctx.beginPath();
-          ctx.moveTo(sx + Math.cos(angle) * 12, sy + Math.sin(angle) * 12);
-          ctx.lineTo(sx + Math.cos(angle) * 3, sy + Math.sin(angle) * 3);
+          ctx.moveTo(sx + Math.cos(ang) * 13, sy + Math.sin(ang) * 13);
+          ctx.lineTo(sx + Math.cos(ang) * 4, sy + Math.sin(ang) * 4);
           ctx.stroke();
         }
         ctx.restore();
       }
-
-      if (!s.introPlayed && introP >= 1) s.introPlayed = true;
 
       raf = requestAnimationFrame(draw);
     }
@@ -515,15 +417,9 @@ export default function RegisterScene() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMouse);
-      observer.disconnect();
+      io.disconnect();
     };
-  }, [init]);
+  }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="reg-scene-canvas"
-      aria-hidden="true"
-    />
-  );
+  return <canvas ref={canvasRef} className="reg-scene-canvas" aria-hidden="true" />;
 }

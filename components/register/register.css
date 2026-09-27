@@ -1,9 +1,7 @@
 /* ==========================================================================
-   Register Section — Cinematic 3D Scene
-   Scoped under .reg-root; no styles here affect other sections.
+   Register Section — Cinematic 3D Scene  (scoped under .reg-root)
    ========================================================================== */
 
-/* ── Root ── */
 .reg-root {
   position: relative;
   isolation: isolate;
@@ -14,7 +12,7 @@
   align-items: center;
 }
 
-/* ── Canvas scene (full-bleed behind all content) ── */
+/* ── Full-bleed canvas ── */
 .reg-scene-wrap {
   position: absolute;
   inset: 0;
@@ -27,48 +25,50 @@
   display: block;
 }
 
-/* ── Content grid ── */
+/* ── Content grid — 4 columns matching the reference ── */
 .reg-content {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1.15fr 1fr 1fr;
-  gap: clamp(1.5rem, 3vw, 3rem);
+  grid-template-columns: 1.1fr 0.55fr 0.55fr 1fr;
+  grid-template-areas: "card tags . countdown";
+  gap: clamp(1rem, 2.5vw, 2.5rem);
   align-items: center;
   padding-block: clamp(5rem, 11vw, 9rem);
-  pointer-events: none; /* Children re-enable */
+  pointer-events: none;
 }
 
-/* ── Registration card ── */
+/* ── Left registration card ── */
 .reg-card {
+  grid-area: card;
   pointer-events: auto;
-  background: rgba(10, 10, 16, 0.72);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  background: rgba(8, 10, 15, 0.78);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
   border: 1px solid rgba(217, 169, 74, 0.22);
   border-radius: 20px;
-  padding: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1.75rem, 3vw, 2.75rem);
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(244, 200, 98, 0.14);
+    0 32px 90px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(244, 200, 98, 0.13);
 }
 
 .reg-heading {
-  font-size: clamp(1.75rem, 3.5vw, 3rem);
-  line-height: 1.1;
+  font-size: clamp(1.875rem, 3.8vw, 3.25rem);
+  line-height: 1.08;
   color: var(--paper);
   margin: 0;
 }
 
 .reg-body {
-  font-size: clamp(0.875rem, 1.1vw, 1rem);
-  line-height: 1.7;
+  font-size: clamp(0.8125rem, 1vw, 0.9375rem);
+  line-height: 1.75;
   color: var(--muted);
-  max-width: 52ch;
+  max-width: 48ch;
 }
 
 .reg-price {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
@@ -85,109 +85,98 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.75rem;
-  background: linear-gradient(135deg, var(--gold), #c49030);
+  background: linear-gradient(135deg, var(--gold) 0%, #c49030 100%);
   color: #07090d;
   font-family: var(--font-grotesk), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.9375rem;
   border-radius: 10px;
   text-decoration: none;
-  box-shadow:
-    0 4px 20px rgba(217, 169, 74, 0.35),
-    0 0 0 0 rgba(217, 169, 74, 0);
-  transition:
-    background 200ms ease,
-    box-shadow 200ms ease,
-    outline 0ms;
   will-change: transform;
   cursor: pointer;
+  box-shadow: 0 4px 22px rgba(217, 169, 74, 0.4);
+  transition: background 200ms ease, box-shadow 200ms ease;
 }
 .reg-cta-btn:hover {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
-  box-shadow:
-    0 8px 32px rgba(244, 200, 98, 0.48),
-    0 0 0 1px rgba(244, 200, 98, 0.22);
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 100%);
+  box-shadow: 0 8px 36px rgba(244, 200, 98, 0.55);
 }
 .reg-cta-btn:focus-visible {
   outline: 2px solid var(--gold-bright);
   outline-offset: 3px;
 }
 .reg-cta-arrow {
-  font-size: 1rem;
   transition: transform 200ms ease;
 }
 .reg-cta-btn:hover .reg-cta-arrow { transform: translateX(3px); }
 
 /* ── Info tags column ── */
 .reg-tags-col {
+  grid-area: tags;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   pointer-events: auto;
 }
 
 /* ── Individual info tag ── */
 .reg-info-tag {
   opacity: 0;
-  transform: translateX(24px);
+  transform: translateX(20px);
   transition:
-    opacity 500ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation: reg-tag-bob 4s ease-in-out infinite;
-  animation-play-state: paused;
+    opacity 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .reg-info-tag--visible {
   opacity: 1;
   transform: none;
-  animation-play-state: running;
+  animation: reg-tag-bob 5s ease-in-out infinite;
 }
-/* Staggered bob offsets */
-.reg-info-tag:nth-child(1) { animation-delay: 0s; }
-.reg-info-tag:nth-child(2) { animation-delay: -1.2s; }
-.reg-info-tag:nth-child(3) { animation-delay: -2.4s; }
-.reg-info-tag:nth-child(4) { animation-delay: -3.1s; }
+.reg-info-tag--visible:nth-child(1) { animation-delay: 0s; }
+.reg-info-tag--visible:nth-child(2) { animation-delay: -1.5s; }
+.reg-info-tag--visible:nth-child(3) { animation-delay: -3s; }
+.reg-info-tag--visible:nth-child(4) { animation-delay: -4s; }
 
 @keyframes reg-tag-bob {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  50%       { transform: translateY(-5px); }
 }
 
 .reg-info-tag-inner {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  background: rgba(10, 10, 16, 0.78);
+  gap: 0.75rem;
+  padding: 0.7rem 0.95rem 1.15rem;
+  background: rgba(8, 10, 16, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(217, 169, 74, 0.25);
-  border-radius: 12px;
-  /* Shield shape — flat top, pointed bottom */
-  clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
-  padding-bottom: 1.4rem;
+  border: 1px solid rgba(217, 169, 74, 0.22);
+  /* Shield / pentagon: rectangle with pointed bottom */
+  clip-path: polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%);
+  border-radius: 0;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(244, 200, 98, 0.12);
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(244, 200, 98, 0.1);
 }
 
 .reg-info-tag-icon {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   color: var(--gold);
-  filter: drop-shadow(0 0 6px rgba(217, 169, 74, 0.5));
+  filter: drop-shadow(0 0 5px rgba(217, 169, 74, 0.55));
 }
 
 .reg-info-tag-content {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
   overflow: hidden;
 }
 
 .reg-info-tag-label {
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
@@ -196,21 +185,15 @@
 .reg-info-tag-value {
   font-family: var(--font-grotesk), system-ui, sans-serif;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--paper);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.reg-info-tag-line {
-  width: 1px;
-  height: 20px;
-  margin: 0 auto;
-  background: linear-gradient(to bottom, rgba(217, 169, 74, 0.4), transparent);
-}
-
-/* ── Countdown ── */
+/* ── Countdown column ── */
 .reg-countdown-col {
+  grid-area: countdown;
   pointer-events: auto;
   display: flex;
   justify-content: center;
@@ -219,46 +202,37 @@
 
 .reg-countdown-wrap {
   position: relative;
-  display: flex;
+  display: inline-flex;
   justify-content: center;
   align-items: center;
 }
 
 .reg-ring-outer {
   position: absolute;
-  inset: -28px;
+  inset: -32px;
   pointer-events: none;
+  z-index: 0;
 }
 
 .reg-ring-svg {
   width: 100%;
   height: 100%;
-  animation: reg-ring-spin 8s linear infinite;
+  animation: reg-ring-spin 9s linear infinite;
 }
-
-@keyframes reg-ring-spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes reg-ring-spin { to { transform: rotate(360deg); } }
 
 .reg-ring-track {
   fill: none;
-  stroke: rgba(217, 169, 74, 0.18);
+  stroke: rgba(217, 169, 74, 0.2);
   stroke-width: 1.5;
 }
-
 .reg-ring-comet {
   fill: none;
-  stroke: url(#reg-comet-grad);
+  stroke: rgba(244, 200, 98, 0.92);
   stroke-width: 3;
   stroke-linecap: round;
-  stroke-dasharray: 52 528;
-  stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 6px rgba(244, 200, 98, 0.7));
-}
-
-/* Inject the gradient def inline — we do it via CSS SVG filter */
-.reg-ring-comet {
-  stroke: rgba(244, 200, 98, 0.9);
+  stroke-dasharray: 54 530;
+  filter: drop-shadow(0 0 7px rgba(244, 200, 98, 0.75));
 }
 
 .reg-countdown-card {
@@ -267,21 +241,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 2rem 2.25rem;
-  background: rgba(10, 10, 16, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(217, 169, 74, 0.28);
+  gap: 0.65rem;
+  padding: 2rem 2rem;
+  background: rgba(8, 10, 16, 0.85);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(217, 169, 74, 0.25);
   border-radius: 18px;
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(244, 200, 98, 0.15);
+    0 24px 70px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(244, 200, 98, 0.14);
+  min-width: 260px;
 }
 
 .reg-countdown-label {
-  font-size: 0.6875rem;
-  letter-spacing: 0.16em;
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
   margin: 0;
@@ -289,8 +264,8 @@
 
 .reg-countdown-digits {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  align-items: flex-start;
+  gap: 0.3rem;
 }
 
 .reg-digit-group {
@@ -301,27 +276,27 @@
 }
 
 .reg-digit-label {
-  font-size: 0.5625rem;
-  letter-spacing: 0.14em;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .reg-digit-sep {
   font-family: var(--font-grotesk), system-ui, sans-serif;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--gold);
   margin-bottom: 0.8rem;
-  align-self: center;
+  line-height: 1;
 }
 
 .reg-countdown-date {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   color: var(--muted);
   margin: 0;
   text-align: center;
-  white-space: nowrap;
+  letter-spacing: 0.04em;
 }
 
 /* ── Flip digit ── */
@@ -333,33 +308,31 @@
 .reg-flip-digit {
   position: relative;
   display: inline-block;
-  width: 2.1rem;
-  height: 2.6rem;
-  perspective: 280px;
+  width: 1.9rem;
+  height: 2.4rem;
+  perspective: 260px;
   font-family: var(--font-grotesk), system-ui, sans-serif;
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-/* The card background */
 .reg-flip-digit::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14, 15, 22, 0.95) 50%, rgba(8, 9, 14, 0.97) 50%);
+  background: linear-gradient(180deg, rgba(14, 15, 22, 0.96) 50%, rgba(8, 9, 14, 0.98) 50%);
   border-radius: 5px;
-  border: 1px solid rgba(217, 169, 74, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(217, 169, 74, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
 }
-/* Seam line */
 .reg-flip-digit::after {
   content: "";
   position: absolute;
   left: 0; right: 0;
   top: 50%;
   height: 1px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 3;
 }
 
@@ -381,17 +354,13 @@
   height: 50%;
   align-items: flex-end;
   padding-bottom: 1px;
-  border-radius: 5px 5px 0 0;
 }
-
 .reg-flip-bottom {
   bottom: 0;
   height: 50%;
   align-items: flex-start;
   padding-top: 1px;
-  border-radius: 0 0 5px 5px;
 }
-
 .reg-flip-flap {
   top: 0;
   height: 50%;
@@ -399,62 +368,58 @@
   padding-bottom: 1px;
   transform-origin: bottom center;
   backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  background: rgba(14, 15, 22, 0.95);
-  border-radius: 5px 5px 0 0;
+  background: rgba(14, 15, 22, 0.96);
   z-index: 2;
 }
-
 .reg-flip-flap--go {
   animation: reg-flip 340ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
-
 @keyframes reg-flip {
-  0% { transform: rotateX(0deg); }
+  0%   { transform: rotateX(0deg); }
   100% { transform: rotateX(-90deg); }
 }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .reg-content {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-areas:
+      "card card"
+      "tags countdown";
   }
-  .reg-card { grid-column: 1 / -1; }
-  .reg-tags-col { grid-column: 1; }
-  .reg-countdown-col { grid-column: 2; }
-
   .reg-info-tag-inner {
     clip-path: none;
-    padding-bottom: 0.75rem;
     border-radius: 12px;
+    padding-bottom: 0.7rem;
   }
 }
 
 @media (max-width: 640px) {
   .reg-content {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "card"
+      "tags"
+      "countdown";
   }
-  .reg-tags-col { grid-column: 1; }
-  .reg-countdown-col { grid-column: 1; justify-content: flex-start; }
-
+  .reg-countdown-col { justify-content: flex-start; }
   .reg-ring-outer { inset: -18px; }
-  .reg-countdown-card { padding: 1.5rem; }
-  .reg-flip-digit { width: 1.7rem; height: 2.1rem; font-size: 1.3rem; }
+  .reg-countdown-card { min-width: 0; padding: 1.5rem 1.25rem; }
+  .reg-flip-digit { width: 1.6rem; height: 2rem; font-size: 1.25rem; }
 }
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
-  .reg-info-tag {
+  .reg-info-tag, .reg-info-tag--visible {
     animation: none !important;
-    transition: opacity 400ms ease !important;
+    transition: opacity 300ms ease !important;
   }
-  .reg-cta-btn { transition: none; }
-  .reg-ring-svg { animation: none; }
-  .reg-flip-flap--go { animation: none; }
-  @keyframes reg-tag-bob { 0%, 100% { transform: none; } }
+  .reg-cta-btn         { transition: none; }
+  .reg-ring-svg        { animation: none; }
+  .reg-flip-flap--go   { animation: none; }
 }
 
 .reg-countdown-placeholder {
-  height: 180px;
+  height: 200px;
+  width: 300px;
 }
