@@ -40,7 +40,7 @@ export default function RulePanel({
   const closing = React.useRef(false);
   const [scrollable, setScrollable] = React.useState(false);
 
-  const sheet = false; // Always show in center of screen as requested
+  const sheet = tier !== "desktop"; // Bottom sheet on mobile/tablet, centered panel on desktop
   const flight = !sheet && !reducedMotion && !!originRect && !!stageRect;
 
   /* ---------------- open ---------------- */
@@ -233,7 +233,7 @@ export default function RulePanel({
           : {
               position: "fixed",
               left: "50%",
-              top: sheet ? "auto" : (stageRect ? `calc(50vh - ${stageRect.top}px)` : "50%"),
+              top: "50%",
               translate: "-50% -50%",
               margin: 0,
               zIndex: 50,

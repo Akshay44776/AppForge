@@ -77,8 +77,11 @@ export default function RulebookSection({
       deviceMemory?: number;
       connection?: { saveData?: boolean };
     };
-    // Force WebGL rendering on all devices to ensure cinematic 3D effects are visible
-    const weak = false;
+    const weak =
+      (nav.hardwareConcurrency ?? 8) <= 4 ||
+      (nav.deviceMemory ?? 8) <= 4 ||
+      nav.connection?.saveData === true ||
+      !probeWebGL2();
 
     const mqReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -321,18 +324,18 @@ export default function RulebookSection({
         <div className="fc-stage-bg" />
         {header}
 
-        {/* reduced-motion or low power: static SVG core, zero WebGL */}
-        {lowPower && (
+        {/* tablet / mobile / reduced-motion: static SVG core, zero WebGL */}
+        {!desktop && (
           <div className="fc-static-wrap">
             <StaticCore size={tier === "mobile" ? 132 : 180} />
           </div>
         )}
 
-        {!lowPower && (
+        {desktop && (
           <CircuitTraces rects={rects} size={stage} core={coreCenter} />
         )}
 
-        {!lowPower && inView && stage.w > 0 && (
+        {desktop && inView && stage.w > 0 && (
           <ForgeCoreScene
             active={inView}
             rects={rects}
