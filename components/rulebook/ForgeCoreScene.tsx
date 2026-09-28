@@ -897,8 +897,14 @@ function Rig({
   // settled-camera unprojection of the measured card rects onto z = 0 (§7)
   React.useEffect(() => {
     if (!rects.length || !stage.w || !stage.h) return;
-    const vh = 2 * SETTLED_DIST * Math.tan((FOV * Math.PI) / 360);
-    const vw = vh * (size.width / size.height);
+    const aspect = size.width / size.height;
+    let dist = SETTLED_DIST;
+    if (aspect < 1) {
+      const targetDist = 3.5 / (aspect * 0.572);
+      dist = Math.max(dist, targetDist);
+    }
+    const vh = 2 * dist * Math.tan((FOV * Math.PI) / 360);
+    const vw = vh * aspect;
     const byId = new Map(rects.map((r) => [r.id, r]));
     const out: THREE.Vector3[] = [];
     for (let i = 1; i <= 12; i++) {
@@ -917,7 +923,19 @@ function Rig({
 
   useFrame(() => {
     const t = progressRef.current * CLIP;
-    camera.position.set(0, 0, track(CAM, t));
+    let dist = track(CAM, t);
+    const aspect = size.width / size.height;
+    if (aspect < 1) {
+      // If the canvas is very tall (e.g. mobile scrolling grid), the fixed vertical FOV 
+      // makes the core massive horizontally. We push the camera back to maintain a reasonable width.
+      // We want the visible width to be about 3.5 units.
+      // visibleWidth = aspect * 2 * dist * Math.tan((FOV * Math.PI) / 360)
+      // 3.5 = aspect * dist * 0.572
+      // dist = 3.5 / (aspect * 0.572)
+      const targetDist = 3.5 / (aspect * 0.572);
+      dist = Math.max(dist, targetDist);
+    }
+    camera.position.set(0, 0, dist);
     camera.lookAt(0, 0, 0);
   });
 
