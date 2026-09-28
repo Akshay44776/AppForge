@@ -53,7 +53,13 @@ export default function Register() {
       {/* Cinematic canvas — full bleed background */}
       <div className="reg-scene-wrap" aria-hidden="true">
         <RegisterScene />
+        <div className="reg-godray" aria-hidden="true" />
       </div>
+
+      {/* §8 — static four-point sparkle accent, fixed bottom-right */}
+      <svg className="reg-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 0c.6 5.6 1.8 9 4 11.2 2.2 2.2 5.6 3.4 8 4-2.4.6-5.8 1.8-8 4-2.2 2.2-3.4 5.6-4 11.2-.6-5.6-1.8-9-4-11.2-2.2-2.2-5.6-3.4-8-4 2.4-.6 5.8-1.8 8-4C10.2 9 11.4 5.6 12 0z" />
+      </svg>
 
       <div className="reg-content wrap">
 

@@ -13,6 +13,10 @@ export default function MagneticButton() {
     const btn = btnRef.current;
     if (!btn) return;
 
+    // §9 of the brief — reduced motion keeps the CTA fully functional and its
+    // hover/focus glow (plain CSS, no continuous loop), just drops the pull.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const RADIUS = 56;
     const STRENGTH = 0.38;
 

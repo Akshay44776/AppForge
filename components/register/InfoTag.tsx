@@ -39,10 +39,18 @@ export default function InfoTag({ icon, label, value, delay = 0 }: InfoTagProps)
   useEffect(() => {
     const el = tagRef.current;
     if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           io.disconnect();
+          if (reduced) {
+            // §9 of the brief — skip the scramble reveal, show final text at once
+            setVisible(true);
+            setDisplayLabel(label);
+            setDisplayValue(value);
+            return;
+          }
           setTimeout(() => {
             setVisible(true);
             startRef.current = performance.now();

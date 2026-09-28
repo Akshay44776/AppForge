@@ -122,20 +122,49 @@
   max-width: 250px;
 }
 
-/* ── Individual info tag ── */
+/* ── Individual info tag ──
+   §5 of the brief: a loose diagonal arc, each card at a slightly different
+   depth, with a slow independent bob once settled. --dx/--dy/--tilt place
+   each card on the arc; reg-tag-in slides/rotates it into that resting
+   transform, then reg-tag-bob idles around it forever. Both keyframes read
+   the same custom properties so there's no jump at the handoff. */
 .reg-info-tag {
   position: relative;
   opacity: 0;
-  transform: translateX(-20px);
-  animation: reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform: translate(-20px, 0px) rotate(0deg);
 }
-.reg-info-tag:nth-child(1) { animation-delay: 0.1s; }
-.reg-info-tag:nth-child(2) { animation-delay: 0.2s; }
-.reg-info-tag:nth-child(3) { animation-delay: 0.3s; }
-.reg-info-tag:nth-child(4) { animation-delay: 0.4s; }
+.reg-info-tag:nth-child(1) {
+  --dx: 6px; --dy: -8px; --tilt: -5deg;
+  animation:
+    reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s forwards,
+    reg-tag-bob 6.2s ease-in-out 0.9s infinite;
+}
+.reg-info-tag:nth-child(2) {
+  --dx: 28px; --dy: 8px; --tilt: 4deg;
+  animation:
+    reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s forwards,
+    reg-tag-bob 5.6s ease-in-out 1.05s infinite;
+}
+.reg-info-tag:nth-child(3) {
+  --dx: 10px; --dy: 26px; --tilt: -6deg;
+  animation:
+    reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards,
+    reg-tag-bob 6.8s ease-in-out 1.2s infinite;
+}
+.reg-info-tag:nth-child(4) {
+  --dx: 30px; --dy: 40px; --tilt: 5deg;
+  animation:
+    reg-tag-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s forwards,
+    reg-tag-bob 6s ease-in-out 1.35s infinite;
+}
 
 @keyframes reg-tag-in {
-  to { opacity: 1; transform: translateX(0); }
+  to { opacity: 1; transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--tilt, 0deg)); }
+}
+
+@keyframes reg-tag-bob {
+  0%, 100% { transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--tilt, 0deg)); }
+  50% { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) - 7px)) rotate(var(--tilt, 0deg)); }
 }
 
 .reg-info-tag-inner {
@@ -147,8 +176,9 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(217, 169, 74, 0.25);
-  /* Chevron pointed right */
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+  /* §5 of the brief — flat-topped shield: rectangle with a small pointed
+     tab at the bottom center, rather than clipping through the content. */
+  clip-path: polygon(0 0, 100% 0, 100% 86%, 58% 86%, 50% 100%, 42% 86%, 0 86%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -179,8 +209,21 @@
   color: var(--paper);
 }
 
+/* §5 of the brief — thin gold leader-line back toward the sphere (which
+   sits to this column's left in the 3D canvas). Fans out at a slightly
+   different angle per card via --tilt so the lines feel like they're all
+   converging on one focal point rather than running parallel. */
 .reg-info-tag-line {
-  display: none;
+  display: block;
+  position: absolute;
+  left: -2.75rem;
+  top: 50%;
+  width: 2.75rem;
+  height: 1px;
+  transform-origin: right center;
+  transform: translateY(-50%) rotate(calc(var(--tilt, 0deg) * -0.55));
+  background: linear-gradient(to left, rgba(217, 169, 74, 0.55), rgba(217, 169, 74, 0));
+  pointer-events: none;
 }
 
 /* ── Countdown column (RIGHT) ── */
@@ -263,7 +306,10 @@
 
 .reg-digit-group {
   display: flex;
-  flex-direction: column;
+  /* §7 of the brief — label sits above the digits; JSX renders the flip
+     number before the label, so reverse the flex order rather than the
+     markup. */
+  flex-direction: column-reverse;
   align-items: center;
   gap: 0.3rem;
 }
@@ -334,9 +380,7 @@
 .reg-flip-flap {
   position: absolute;
   left: 0; right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  text-align: center;
   color: var(--paper);
   overflow: hidden;
   z-index: 1;
@@ -345,24 +389,22 @@
 .reg-flip-top {
   top: 0;
   height: 50%;
-  align-items: flex-end;
-  padding-bottom: 1px;
+  line-height: 2.2rem;
 }
 .reg-flip-bottom {
   bottom: 0;
   height: 50%;
-  align-items: flex-start;
-  padding-top: 1px;
+  line-height: 0;
 }
 .reg-flip-flap {
   top: 0;
   height: 50%;
-  align-items: flex-end;
-  padding-bottom: 1px;
+  line-height: 2.2rem;
   transform-origin: bottom center;
   backface-visibility: hidden;
   background: rgba(16, 18, 24, 0.95);
   z-index: 2;
+  border-radius: 4px 4px 0 0;
 }
 .reg-flip-flap--go {
   animation: reg-flip 340ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -370,6 +412,56 @@
 @keyframes reg-flip {
   0%   { transform: rotateX(0deg); }
   100% { transform: rotateX(-90deg); }
+}
+
+/* ── God-ray overlay (§8) — a soft blurred CSS gradient, as the brief
+   explicitly allows in place of true volumetric lighting. Sits above the
+   canvas, below the content, and fades in once on mount. ── */
+.reg-godray {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    -35deg,
+    transparent 55%,
+    rgba(217, 169, 74, 0.1) 70%,
+    rgba(244, 200, 98, 0.16) 78%,
+    transparent 92%
+  );
+  opacity: 0;
+  animation: reg-godray-in 9s ease-out forwards;
+}
+@keyframes reg-godray-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ── Static sparkle accent (§8) — fixed near the bottom-right corner ── */
+.reg-sparkle {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: clamp(1rem, 3vw, 2.5rem);
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  color: var(--gold);
+  pointer-events: none;
+  animation: reg-sparkle-twinkle 5s ease-in-out infinite;
+}
+@keyframes reg-sparkle-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+
+/* ── WebGL2-less fallback (no shard field, no assembly — just the section's
+   own dark gradient, so the page still reads correctly) ── */
+.reg-scene-canvas--fallback {
+  background: radial-gradient(
+    ellipse 70% 60% at 58% 45%,
+    rgba(217, 169, 74, 0.08),
+    transparent 70%
+  );
 }
 
 /* ── Responsive ── */
@@ -392,5 +484,35 @@
   }
   .reg-tags-col {
     margin: 0 auto;
+  }
+}
+
+/* ── Reduced motion (§9) ── */
+@media (prefers-reduced-motion: reduce) {
+  .reg-ring-svg {
+    animation: none;
+  }
+  .reg-godray {
+    animation: none;
+    opacity: 0.6;
+  }
+  .reg-sparkle {
+    animation: none;
+    opacity: 0.7;
+  }
+  .reg-info-tag {
+    /* higher-specificity nth-child rules set the real animations, so this
+       needs !important to actually win and settle each card at its resting
+       arc position with no motion at all. */
+    animation: none !important;
+    opacity: 1;
+    transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--tilt, 0deg));
+  }
+  .reg-flip-flap--go {
+    animation-duration: 1ms;
+  }
+  .reg-cta-btn,
+  .reg-cta-arrow {
+    transition-duration: 120ms;
   }
 }
