@@ -56,6 +56,17 @@
   contain: layout paint; /* reserve height before JS runs — no CLS */
 }
 
+/* Force landscape mode on mobile/tablet */
+@media (max-width: 1023px) {
+  .fc-stage {
+    width: 100vh !important;
+    width: 100svh !important;
+    height: 100vw !important;
+    transform-origin: top left;
+    transform: rotate(-90deg) translateX(-100%);
+  }
+}
+
 .fc-stage-bg {
   position: absolute;
   inset: 0;
@@ -642,48 +653,7 @@
   justify-content: center;
 }
 
-@media (max-width: 1023px) {
-  .fc-stage {
-    height: auto !important;
-    overflow: hidden !important;
-    padding-bottom: 6rem;
-  }
-  .fc-header {
-    position: relative !important;
-    top: 0 !important;
-    padding-top: 4rem;
-    padding-bottom: 2rem;
-  }
-  /* Contain the WebGL 3D core + traces to a small area on mobile */
-  .fc-canvas-layer,
-  .fc-traces-layer {
-    position: relative !important;
-    width: 240px;
-    height: 240px;
-    margin: 0 auto 1.5rem;
-    inset: unset !important;
-    overflow: hidden;
-    border-radius: 50%;
-    pointer-events: none;
-  }
-  .fc-grid-tablet .fc-card {
-    width: auto;
-    flex: 1 1 40%;
-    min-width: 140px;
-  }
-}
-
-@media (max-width: 639px) {
-  .fc-grid-mobile .fc-cluster-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-  .fc-grid-mobile .fc-card {
-    width: 100%;
-    flex: none;
-  }
-}
+/* Mobile grid styles removed to enforce desktop landscape view everywhere */
 
 /* CSS-only unseal for tablet (§11) */
 .fc-root[data-tier="tablet"] .fc-card,

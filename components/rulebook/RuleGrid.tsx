@@ -54,18 +54,30 @@ export default function RuleGrid({
     for (const r of rules) {
       const el = cardRefs.current.get(r.id);
       if (!el) continue;
-      const b = el.getBoundingClientRect();
-      const cx = b.left - base.left + b.width / 2;
-      const cy = b.top - base.top + b.height / 2;
-      const side: "left" | "right" = cx < base.width / 2 ? "left" : "right";
+      
+      // Calculate position using offsets so it works perfectly even when the parent is rotated 90deg via CSS.
+      let x = 0;
+      let y = 0;
+      let curr: HTMLElement | null = el;
+      while (curr && curr !== layer) {
+        x += curr.offsetLeft;
+        y += curr.offsetTop;
+        curr = curr.offsetParent as HTMLElement;
+      }
+      
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const side: "left" | "right" = cx < layer.offsetWidth / 2 ? "left" : "right";
       out.push({
         id: r.id,
         cx,
         cy,
-        w: b.width,
-        h: b.height,
+        w,
+        h,
         side,
-        edgeX: side === "left" ? cx + b.width / 2 : cx - b.width / 2,
+        edgeX: side === "left" ? cx + w / 2 : cx - w / 2,
       });
     }
     onMeasure(out);
