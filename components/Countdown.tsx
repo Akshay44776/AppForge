@@ -12,9 +12,10 @@ export default function Countdown({
   className?: string;
 }) {
   const target = new Date(to).getTime();
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(target);
 
   useEffect(() => {
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);

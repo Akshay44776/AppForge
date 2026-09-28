@@ -101,7 +101,7 @@ export default function RuleGrid({
       currentCards.forEach((el) => io.unobserve(el));
       io.disconnect();
     };
-  }, [measure, tier]);
+  }, [measure, tier, cardRefs]);
 
   const clusters = CLUSTER_SLOTS.filter((s) => s.category !== null);
 

@@ -95,7 +95,7 @@ export default function ScrollScrubHero() {
     }, { rootMargin: "200% 0px" });
     io.observe(wrap);
     return () => io.disconnect();
-  }, [reduced]);
+  }, [reduced, draw]);
 
   // rAF scroll loop with passive scroll semantics (progress from wrapper rect)
   useEffect(() => {

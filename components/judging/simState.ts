@@ -234,9 +234,8 @@ export function updateSim(sim: SimState, dt: number) {
        one, so it never blinks out between two picks */
     v.glyphIn = sim.warm ? 1 : win(t, 1.1, 1.5);
 
-    /* the rain never fully leaves: it is part of the settled look, so it only
-       drops back to an ambient level once the glyph has formed */
-    v.rain = win(t, 1.2, 1.75) * (1 - 0.42 * win(t, 3.2, 4.3));
+    /* the rain stays fully visible until the next card is selected */
+    v.rain = win(t, 1.2, 1.75);
     v.wave = win(t, 2.4, 2.95);
     v.wedge = win(t, 2.3, 2.9);
 
