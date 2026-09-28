@@ -84,8 +84,7 @@ export default function RulebookSection({
 
     const apply = () => {
       const w = window.innerWidth;
-      // Force "desktop" tier everywhere so mobile phones get the exact same 3D layout, animations, and transitions as the laptop version.
-      const t: Tier = "desktop";
+      const t: Tier = weak || w < 640 ? "mobile" : w < 1024 ? "tablet" : "desktop";
       setTier(t);
       forge.setTier(t);
       setLowPower(weak);

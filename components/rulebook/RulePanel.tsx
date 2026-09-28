@@ -40,8 +40,8 @@ export default function RulePanel({
   const closing = React.useRef(false);
   const [scrollable, setScrollable] = React.useState(false);
 
-  const sheet = tier !== "desktop"; // Bottom sheet on mobile/tablet, centered panel on desktop
-  const flight = !sheet && !reducedMotion && !!originRect && !!stageRect && window.innerWidth >= 1024;
+  const sheet = false; // Always use the 3D floating panel, even on mobile!
+  const flight = !reducedMotion && !!originRect && !!stageRect;
 
   /* ---------------- open ---------------- */
   React.useEffect(() => {
