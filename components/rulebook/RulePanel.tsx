@@ -80,20 +80,20 @@ export default function RulePanel({
     // 1. detach (0–0.3s) → 2. fly + turn edge-on (0.3–0.9s)
     const fly = flyer.animate(
       [
-        { transform: "translate3d(0,0,0) rotateY(0deg) scale(1)", opacity: 1, offset: 0 },
-        { transform: "translate3d(0,0,60px) rotateY(0deg) scale(1.15)", opacity: 1, offset: 0.214 },
+        { transform: "perspective(1200px) translate3d(0,0,0) rotateY(0deg) scale(1)", opacity: 1, offset: 0 },
+        { transform: "perspective(1200px) translate3d(0,0,60px) rotateY(0deg) scale(1.15)", opacity: 1, offset: 0.214 },
         {
-          transform: `translate3d(${dx * 0.5}px, ${dy * 0.5 + dy * bow}px, 90px) rotateY(60deg) scale(1.05)`,
+          transform: `perspective(1200px) translate3d(${dx * 0.5}px, ${dy * 0.5 + dy * bow}px, 90px) rotateY(60deg) scale(1.05)`,
           opacity: 1,
           offset: 0.5,
         },
         {
-          transform: `translate3d(${dx}px, ${dy}px, 0) rotateY(90deg) scale(.9)`,
+          transform: `perspective(1200px) translate3d(${dx}px, ${dy}px, 0) rotateY(90deg) scale(.9)`,
           opacity: 1,
           offset: 0.642,
         },
         {
-          transform: `translate3d(${dx}px, ${dy}px, 0) rotateY(90deg) scale(.9)`,
+          transform: `perspective(1200px) translate3d(${dx}px, ${dy}px, 0) rotateY(90deg) scale(.9)`,
           opacity: 0,
           offset: 0.66,
         },
@@ -104,10 +104,10 @@ export default function RulePanel({
     // 3. unfold (0.9–1.4s): continue past edge-on, resolve face-on at −8°
     const unfold = panel.animate(
       [
-        { opacity: 0, transform: "rotateY(-90deg) scale(.9)", offset: 0 },
-        { opacity: 0, transform: "rotateY(-90deg) scale(.9)", offset: 0.642 },
-        { opacity: 1, transform: "rotateY(-22deg) scale(1.02)", offset: 0.85 },
-        { opacity: 1, transform: "rotateY(-8deg) scale(1)", offset: 1 },
+        { opacity: 0, transform: "perspective(1200px) rotateY(-90deg) scale(.9)", offset: 0 },
+        { opacity: 0, transform: "perspective(1200px) rotateY(-90deg) scale(.9)", offset: 0.642 },
+        { opacity: 1, transform: "perspective(1200px) rotateY(-22deg) scale(1.02)", offset: 0.85 },
+        { opacity: 1, transform: "perspective(1200px) rotateY(-8deg) scale(1)", offset: 1 },
       ],
       { duration: 1400, easing: EASE_P3, fill: "both" }
     );
@@ -161,9 +161,9 @@ export default function RulePanel({
     // §8.3 close: rotateY → 90°, shrink into the core, then absorb + shockwave
     panel.animate(
       [
-        { opacity: 1, transform: "rotateY(-8deg) scale(1)" },
-        { opacity: 1, transform: "rotateY(60deg) scale(.6)", offset: 0.66 },
-        { opacity: 0, transform: "rotateY(90deg) scale(.14)" },
+        { opacity: 1, transform: "perspective(1200px) rotateY(-8deg) scale(1)" },
+        { opacity: 1, transform: "perspective(1200px) rotateY(60deg) scale(.6)", offset: 0.66 },
+        { opacity: 0, transform: "perspective(1200px) rotateY(90deg) scale(.14)" },
       ],
       { duration: 900, easing: EASE_P3, fill: "both" }
     );

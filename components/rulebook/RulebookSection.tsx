@@ -63,6 +63,7 @@ export default function RulebookSection({
   const [inView, setInView] = React.useState(false);
   const [rects, setRects] = React.useState<CardRect[]>([]);
   const [stage, setStage] = React.useState({ w: 0, h: 0 });
+  const [activeStageRect, setActiveStageRect] = React.useState<DOMRect | null>(null);
   const [gold, setGold] = React.useState(goldHex ?? "#d9a94a");
 
   const openId = useForgeStore((s) => s.open);
@@ -144,11 +145,25 @@ export default function RulebookSection({
    */
   React.useEffect(() => {
     if (tier !== "desktop") {
-      progressRef.current = 1;
-      applyCardLanding(cardRefs.current, 1);
-      rootRef.current?.style.setProperty("--fc-chrome-opacity", "1");
-      forge.setSettled(true);
-      return;
+      // On mobile, animate the entrance over 2 seconds instead of scrubbing
+      let start = performance.now();
+      let raf: number;
+      const animate = (time: number) => {
+        let p = (time - start) / 2000;
+        if (p > 1) p = 1;
+        // ease out cubic
+        const eased = 1 - Math.pow(1 - p, 3);
+        progressRef.current = eased;
+        applyCardLanding(cardRefs.current, eased);
+        rootRef.current?.style.setProperty("--fc-chrome-opacity", eased.toString());
+        if (p < 1) {
+          raf = requestAnimationFrame(animate);
+        } else {
+          forge.setSettled(true);
+        }
+      };
+      raf = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(raf);
     }
     if (reduced) {
       progressRef.current = 1;
@@ -218,6 +233,7 @@ export default function RulebookSection({
       const current = forge.get().open;
       if (current === id) return;
       originRect.current = el.getBoundingClientRect();
+      setActiveStageRect(stageRef.current?.getBoundingClientRect() ?? null);
       if (current !== null) {
         // close the current panel first, then open the new one
         pendingOpen.current = id;
@@ -365,7 +381,7 @@ export default function RulebookSection({
               key={openRule.id}
               rule={openRule}
               originRect={originRect.current}
-              stageRect={stageRef.current?.getBoundingClientRect() ?? null}
+              stageRect={activeStageRect}
               tier={desktop ? "desktop" : tier}
               reducedMotion={reduced}
               coreCenter={coreCenter}

@@ -86,6 +86,9 @@
     width: 100%;
     flex: none;
   }
+  .fc-grid-mobile .fc-card:nth-child(3) {
+    grid-column: 1 / -1;
+  }
 }
 
 .fc-stage-bg {
@@ -144,7 +147,6 @@
   position: absolute;
   inset: 0;
   z-index: 5;
-  perspective: 1200px;
   pointer-events: none;
 }
 
@@ -676,22 +678,7 @@
 
 
 
-/* CSS-only unseal for tablet (§11) */
-.fc-root[data-tier="tablet"] .fc-card,
-.fc-root[data-tier="mobile"] .fc-card {
-  opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 520ms var(--fc-ease-power3),
-    transform 520ms var(--fc-ease-power3);
-  transition-delay: calc(var(--fc-i, 0) * 60ms);
-}
 
-.fc-root[data-tier="tablet"] .fc-card.fc-card-visible,
-.fc-root[data-tier="mobile"] .fc-card.fc-card-visible {
-  opacity: 1 !important;
-  transform: none;
-}
 
 /* bottom sheet (§11 mobile) */
 .fc-sheet-backdrop {
