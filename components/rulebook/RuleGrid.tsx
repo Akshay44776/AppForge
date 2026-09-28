@@ -109,6 +109,13 @@ export default function RuleGrid({
             width: `${LAYOUT.clusterW * 100}%`,
           }
         : {};
+    
+    if (tier !== "desktop" && slot.category === "Format & Fair Play") {
+      // Create an empty space in the middle of the mobile grid 
+      // where the 3D Core can sit perfectly without overlapping any cards!
+      style.marginBottom = "min(35vh, 320px)";
+    }
+
     return (
       <div className="fc-cluster" key={slot.category} style={style}>
         <div className="fc-cluster-label fc-ghostable">{slot.category}</div>
