@@ -28,10 +28,10 @@ export default function FlipDigit({ value }: Props) {
 
   return (
     <span className="reg-flip-digit" aria-hidden="true">
-      {/* Static top half showing current */}
-      <span className="reg-flip-top">{current}</span>
-      {/* Static bottom half showing next */}
-      <span className="reg-flip-bottom">{next}</span>
+      {/* Static top half showing next (revealed as flap falls) */}
+      <span className="reg-flip-top">{next}</span>
+      {/* Static bottom half showing current */}
+      <span className="reg-flip-bottom">{current}</span>
       {/* Animating flap — top half of current flipping down */}
       <span className={`reg-flip-flap ${flipping ? "reg-flip-flap--go" : ""}`}>{current}</span>
     </span>
